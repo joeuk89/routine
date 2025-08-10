@@ -1,12 +1,13 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Search, GripVertical } from 'lucide-react'
+import { GripVertical } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { Routine } from '../model/types'
 import type { Exercise } from '@/features/exercises/model/types'
 import { uid } from '@/lib/id'
+import { ExerciseSearchBar } from '@/components/common/ExerciseSearchBar'
 import {
   DndContext,
   closestCenter,
@@ -218,15 +219,12 @@ export function RoutineForm({
         </label>
         
         {/* Search bar */}
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search exercises..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <ExerciseSearchBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          placeholder="Search exercises..."
+          className="mb-3"
+        />
         
         <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-1">
           {exercises.length === 0 ? (

@@ -4,7 +4,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Plus, Dumbbell, List } from 'lucide-react'
 import type { Exercise } from '@/features/exercises/model/types'
 import type { Routine } from '@/features/routines/model/types'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { ExerciseSearchBar } from '@/components/common/ExerciseSearchBar'
 
 interface AddModalProps {
   exercises: Exercise[]
@@ -16,6 +17,16 @@ interface AddModalProps {
 export function AddModal({ exercises, routines, onAddExercise, onAddRoutine }: AddModalProps) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<'main' | 'exercises' | 'routines'>('main')
+  const [exerciseSearchQuery, setExerciseSearchQuery] = useState('')
+
+  // Filter exercises based on search query
+  const filteredExercises = useMemo(() => {
+    return exercises
+      .filter(exercise => 
+        exercise.name.toLowerCase().includes(exerciseSearchQuery.toLowerCase())
+      )
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [exercises, exerciseSearchQuery])
 
   function handleAddExercise(exerciseId: string) {
     onAddExercise(exerciseId)
@@ -93,21 +104,39 @@ export function AddModal({ exercises, routines, onAddExercise, onAddRoutine }: A
             Back
           </Button>
         </div>
+        
+        {/* Search bar */}
+        <ExerciseSearchBar
+          searchQuery={exerciseSearchQuery}
+          onSearchChange={setExerciseSearchQuery}
+          placeholder="Search exercises..."
+        />
+        
         <div className="max-h-60 overflow-y-auto space-y-2">
-          {(exercises || []).map((exercise) => (
-            <Button
-              key={exercise.id}
-              variant="outline"
-              onClick={() => handleAddExercise(exercise.id)}
-              className="w-full justify-start gap-3 h-12"
-            >
-              <span 
-                className="inline-block h-4 w-4 rounded flex-shrink-0" 
-                style={{ background: exercise.color }} 
-              />
-              <span>{exercise.name}</span>
-            </Button>
-          ))}
+          {exercises.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Create some exercises first
+            </p>
+          ) : filteredExercises.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No exercises match your search
+            </p>
+          ) : (
+            filteredExercises.map((exercise) => (
+              <Button
+                key={exercise.id}
+                variant="outline"
+                onClick={() => handleAddExercise(exercise.id)}
+                className="w-full justify-start gap-3 h-12"
+              >
+                <span 
+                  className="inline-block h-4 w-4 rounded flex-shrink-0" 
+                  style={{ background: exercise.color }} 
+                />
+                <span>{exercise.name}</span>
+              </Button>
+            ))
+          )}
         </div>
       </div>
     )
@@ -123,7 +152,7 @@ export function AddModal({ exercises, routines, onAddExercise, onAddRoutine }: A
           </Button>
         </div>
         <div className="max-h-60 overflow-y-auto space-y-2">
-          {(routines || []).map((routine) => (
+          {(routines || []).sort((a, b) => a.name.localeCompare(b.name)).map((routine) => (
             <Button
               key={routine.id}
               variant="outline"
@@ -159,7 +188,13 @@ export function AddModal({ exercises, routines, onAddExercise, onAddRoutine }: A
         Add
       </Button>
       
-      <Dialog open={open} onOpenChange={(open) => { setOpen(open); if (!open) setView('main') }}>
+      <Dialog open={open} onOpenChange={(open) => { 
+        setOpen(open)
+        if (!open) {
+          setView('main')
+          setExerciseSearchQuery('')
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add to Day</DialogTitle>

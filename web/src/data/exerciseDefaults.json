@@ -1,0 +1,538 @@
+[
+  {
+    "name": "Barbell Back Squat",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Front Squat",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Goblet Squat",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Bulgarian Split Squat",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Box Squat",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Overhead Squat",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Pistol Squat",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Jump Squat",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Wall Sit",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Conventional Deadlift",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Sumo Deadlift",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Romanian Deadlift",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Trap Bar Deadlift",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Single-Leg Deadlift",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Stiff Leg Deadlift",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Bench Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Incline Bench Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Decline Bench Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Dumbbell Bench Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Incline Dumbbell Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Close-Grip Bench Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Push-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Diamond Push-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Overhead Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Military Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Push Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Seated Shoulder Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Dumbbell Shoulder Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Arnold Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Pull-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Chin-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Wide-Grip Pull-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Neutral-Grip Pull-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Lat Pulldown",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Wide-Grip Lat Pulldown",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Barbell Row",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Bent-Over Row",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Pendlay Row",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "T-Bar Row",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Dumbbell Row",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Seated Cable Row",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Chest Supported Row",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Inverted Row",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Face Pull",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Lunges",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Walking Lunge",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Reverse Lunge",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Lateral Lunge",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Curtsy Lunge",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Jump Lunge",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Step-Up",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Lateral Step-Up",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Leg Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Hack Squat",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Leg Extension",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Leg Curl",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Dips",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Tricep Dips",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Parallel Bar Dips",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Overhead Tricep Extension",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Tricep Pushdown",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Skull Crushers",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Diamond Push-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Barbell Curl",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Dumbbell Curl",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Hammer Curl",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Concentration Curl",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Preacher Curl",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Cable Curl",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Lateral Raise",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Front Raise",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Rear Delt Fly",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Reverse Fly",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Upright Row",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Shrugs",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Standing Calf Raise",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Seated Calf Raise",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Calf Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Plank",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Side Plank",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Plank to Push-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Russian Twist",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Bicycle Crunch",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Crunches",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Sit-Ups",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Leg Raise",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Hanging Leg Raise",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Knee Raise",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Dead Bug",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Mountain Climber",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Ab Wheel Rollout",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Superman",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Bird Dog",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Hip Thrust",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Barbell Hip Thrust",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Single-Leg Hip Thrust",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Glute Bridge",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Single-Leg Glute Bridge",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Clamshells",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Fire Hydrant",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Good Morning",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Kettlebell Swing",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Kettlebell Goblet Squat",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Kettlebell Deadlift",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Kettlebell Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Turkish Get-Up",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Clean and Press",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Clean and Jerk",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Snatch",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Power Clean",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Hang Clean",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Thruster",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Burpee",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Burpee Box Jump",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Box Jump",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Broad Jump",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Vertical Jump",
+    "type": "REPS_ONLY"
+  },
+  {
+    "name": "Medicine Ball Slam",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Wall Ball",
+    "type": "WEIGHT_REPS"
+  },
+  {
+    "name": "Battle Ropes",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Ropes Alternating Waves",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Ropes Spiral",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Bear Crawl",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Crab Walk",
+    "type": "HOLD_SECONDS"
+  },
+  {
+    "name": "Farmer's Walk",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Suitcase Carry",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Overhead Carry",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Front-Loaded Carry",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Sled Push",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Sled Pull",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Prowler Push",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Tire Flip",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Sandbag Carry",
+    "type": "WEIGHT_DISTANCE"
+  },
+  {
+    "name": "Yoke Walk",
+    "type": "WEIGHT_DISTANCE"
+  }
+]

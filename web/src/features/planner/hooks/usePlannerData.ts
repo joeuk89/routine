@@ -15,7 +15,7 @@ export function usePlannerData(state: AppState): PlannerData {
     weekStartISO: state.planner.currentWeekStartISO,
     plan: state.planner.plan,
     exercises: state.exercises.allIds.map(id => state.exercises.byId[id]),
-    routines: state.routines.allIds.map(id => state.routines.byId[id]),
+    routines: state.routines.allIds.map(id => state.routines.byId[id]).sort((a, b) => a.name.localeCompare(b.name)),
     logs: state.logs.allIds.map(id => state.logs.byId[id]),
     settings: state.settings.preferences
   }), [

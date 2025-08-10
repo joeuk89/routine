@@ -84,7 +84,6 @@ export function ExerciseFormModal({ open, onOpenChange, onAdd }: ExerciseFormMod
                 <SelectItem value="WEIGHT_REPS">Weight + Reps</SelectItem>
                 <SelectItem value="HOLD_SECONDS">Hold (seconds)</SelectItem>
                 <SelectItem value="REPS_ONLY">Reps only</SelectItem>
-                <SelectItem value="DISTANCE_TIME">Distance + Time</SelectItem>
               </SelectContent>
             </Select>
           </div>

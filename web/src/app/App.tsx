@@ -157,7 +157,9 @@ function InnerApp() {
   const exercises = exerciseSelectors.getAll(state)
   const logs = logSelectors.getForDateRange(state, '1900-01-01', '2200-12-31') // Get all logs
   const routines = useMemo(() => 
-    state.routines.allIds.map(id => state.routines.byId[id]), 
+    state.routines.allIds
+      .map(id => state.routines.byId[id])
+      .sort((a, b) => a.name.localeCompare(b.name)), 
     [state.routines]
   )
   const settings = state.settings.preferences

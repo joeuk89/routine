@@ -27,7 +27,9 @@ export function TodayView() {
     [state.logs]
   )
   const routines = useMemo(() => 
-    state.routines.allIds.map(id => state.routines.byId[id]), 
+    state.routines.allIds
+      .map(id => state.routines.byId[id])
+      .sort((a, b) => a.name.localeCompare(b.name)), 
     [state.routines]
   )
   const plan = state.planner.plan
