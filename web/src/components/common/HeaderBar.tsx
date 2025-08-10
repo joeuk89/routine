@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Calendar, Database, Download, Trash2, Upload } from 'lucide-react'
 import { LocalStorageAdapter } from '@/services/storage/localStorage'
 import { toast } from 'sonner'
-import type { AppState } from '@/store/state'
+import type { AppState } from '@/store/rootReducer'
 
 export function HeaderBar({ state, onReset, onDrive, onImport }: { state: AppState; onReset: () => void; onDrive: () => void; onImport: (s: AppState) => void }) {
   async function exportJson() {

@@ -1,5 +1,5 @@
-import type { AppState } from '@/store/state'
-import { defaultState } from '@/store/state'
+import type { AppState } from '@/store/rootReducer'
+import { defaultAppState } from '@/store/rootReducer'
 import type { StorageAdapter } from './storage.types'
 
 const LS_KEY = 'workout-planner-v3'
@@ -9,9 +9,9 @@ export const LocalStorageAdapter: StorageAdapter = {
     try {
       const raw = localStorage.getItem(LS_KEY)
       if (raw) return JSON.parse(raw) as AppState
-      return defaultState
+      return defaultAppState
     } catch {
-      return defaultState
+      return defaultAppState
     }
   },
   async save(state: AppState): Promise<void> {

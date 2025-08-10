@@ -1,26 +1,27 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react'
-import { reducer } from './reducer'
-import { defaultState, type AppState } from './state'
-import type { Actions } from './actions'
+import { rootReducer, defaultAppState, type AppState, type AppActions } from './rootReducer'
 import { LocalStorageAdapter } from '@/services/storage/localStorage'
+import { createValidatedDispatch } from './middleware/validationMiddleware'
+import { actions } from './actions'
 
 type Store = {
   state: AppState
-  dispatch: React.Dispatch<Actions>
+  dispatch: React.Dispatch<AppActions>
 }
 
 const StoreContext = createContext<Store | undefined>(undefined)
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, defaultState)
-  const value = useMemo(() => ({ state, dispatch }), [state])
+  const [state, rawDispatch] = useReducer(rootReducer, defaultAppState)
+  const dispatch = useMemo(() => createValidatedDispatch(rawDispatch), [rawDispatch])
+  const value = useMemo(() => ({ state, dispatch }), [state, dispatch])
   const hasLoadedRef = useRef(false)
   
   // Load on mount
   useEffect(() => {
     ;(async () => {
       const loaded = await LocalStorageAdapter.load()
-      dispatch({ type: 'LOAD_FROM_STORAGE', payload: loaded })
+      dispatch(actions.root.loadFromStorage(loaded))
       hasLoadedRef.current = true
     })()
   }, [])

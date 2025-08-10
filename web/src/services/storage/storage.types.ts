@@ -1,4 +1,4 @@
-import type { AppState } from '@/store/state'
+import type { AppState } from '@/store/rootReducer'
 
 export interface StorageAdapter {
   load(): Promise<AppState>

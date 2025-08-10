@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '../../../components/ui/checkbox'
 import { Dumbbell, Calendar } from 'lucide-react'
 import { useStore } from '@/store/context'
+import { actions } from '@/store/actions'
 import { iso, formatDayLabel, addDaysUTC } from '@/lib/date'
 import { computePB, latestLogForExerciseBeforeDate, getLogForExerciseOnDate, getCurrentProgressDetails } from '@/lib/metrics'
 import { uid } from '@/lib/id'
@@ -17,7 +18,20 @@ import { getPlanItemsForDate } from '@/features/planner/model/plan'
 
 export function TodayView() {
   const { state, dispatch } = useStore()
-  const { exercises, logs, plan, settings } = state
+  const exercises = useMemo(() => 
+    state.exercises.allIds.map(id => state.exercises.byId[id]), 
+    [state.exercises]
+  )
+  const logs = useMemo(() => 
+    state.logs.allIds.map(id => state.logs.byId[id]), 
+    [state.logs]
+  )
+  const routines = useMemo(() => 
+    state.routines.allIds.map(id => state.routines.byId[id]), 
+    [state.routines]
+  )
+  const plan = state.planner.plan
+  const settings = state.settings.preferences
   const [logTarget, setLogTarget] = useState<{ exercise: Exercise; currentLog: LogEntry | null } | null>(null)
   const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
 
@@ -39,10 +53,7 @@ export function TodayView() {
   const todayPlan = getPlanItemsForDate(plan, today)
 
   const updateTodayPlan = (items: PlanItem[]) => {
-    dispatch({
-      type: 'UPDATE_PLAN',
-      payload: { dateISO: today, items }
-    })
+    dispatch(actions.planner.updatePlan(today, items))
   }
 
   const onAddExercise = (exerciseId: string) => {
@@ -50,7 +61,7 @@ export function TodayView() {
   }
 
   const onAddRoutine = (routineId: string) => {
-    const routine = state.routines.find(r => r.id === routineId)
+    const routine = state.routines.byId[routineId]
     if (!routine) return
     
     updateTodayPlan([...todayPlan, {
@@ -223,7 +234,7 @@ export function TodayView() {
         <p className="text-xl text-gray-600">{formatDayLabel(new Date(today))}</p>
         <AddModal
           exercises={exercises}
-          routines={state.routines}
+          routines={routines}
           onAddExercise={onAddExercise}
           onAddRoutine={onAddRoutine}
         />
@@ -294,10 +305,7 @@ export function TodayView() {
           
           if (logTarget.currentLog) {
             // Update existing log
-            dispatch({ 
-              type: 'UPDATE_LOG', 
-              payload: { id: logTarget.currentLog.id, payload } 
-            })
+            dispatch(actions.logs.update(logTarget.currentLog.id, payload))
           } else {
             // Create new log
             const entry: LogEntry = { 
@@ -307,10 +315,7 @@ export function TodayView() {
               dateISO: today, 
               payload 
             }
-            dispatch({ 
-              type: 'SAVE_LOG', 
-              payload: { entry } 
-            })
+            dispatch(actions.logs.save(entry))
           }
           setLogTarget(null)
         }}

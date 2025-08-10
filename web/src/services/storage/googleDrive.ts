@@ -1,4 +1,4 @@
-import type { AppState } from '@/store/state'
+import type { AppState } from '@/store/rootReducer'
 import type { StorageAdapter } from './storage.types'
 
 export const GoogleDriveAdapter: StorageAdapter = {
