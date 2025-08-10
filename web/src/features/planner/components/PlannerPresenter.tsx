@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Calendar, ChevronLeft, ChevronRight, History, LinkIcon, Trophy, Trash2, GripVertical } from 'lucide-react'
 import type { Plan, PlanItem } from '../model/plan'
 import type { Exercise } from '@/features/exercises/model/types'
@@ -15,6 +16,7 @@ import type { MassUnit } from '@/lib/units'
 import { LastSessionPopover } from './LastSessionPopover'
 import { AddModal } from './AddModal'
 import { PlannerDay } from './PlannerDay'
+import { actions as storeActions } from '@/store/actions'
 import {
   DndContext,
   closestCenter,
@@ -89,11 +91,12 @@ const SimplifiedBar = memo(function SimplifiedBar({ item, exercises }: { item: P
 export interface PlannerPresenterProps {
   data: PlannerData
   actions: PlannerActions
+  dispatch: any
 }
 
-export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }: PlannerPresenterProps) {
+export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, dispatch }: PlannerPresenterProps) {
   const { weekStartISO, plan, exercises, routines, logs, settings } = data
-  const { onPlanUpdate, onLogExercise, onWeekNavigate } = actions
+  const { onPlanUpdate, onClearPlanDate, onLogExercise, onWeekNavigate } = actions
   
   const weekStart = new Date(weekStartISO + 'T00:00:00Z')
   const todayISO = iso(new Date())
@@ -111,11 +114,98 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }
   const getDateISOForDay = (dayName: string): string => {
     return getDateForDayInWeek(weekStartISO, dayName as DayKey, weekStartDay)
   }
+
+  // Helper function to get session heading based on date
+  const getSessionHeading = (dateISO: string): string => {
+    return dateISO < todayISO ? 'Session Details' : 'Today\'s Session'
+  }
+
+  // Helper function to count logs for exercise(s) on a specific date
+  const countLogsForExercise = (exerciseId: string, dateISO: string): number => {
+    return logs.filter(log => log.exerciseId === exerciseId && log.dateISO === dateISO).length
+  }
+
+  const countLogsForExercises = (exerciseIds: string[], dateISO: string): number => {
+    return logs.filter(log => exerciseIds.includes(log.exerciseId) && log.dateISO === dateISO).length
+  }
+
+  // Helper function to delete logs for exercise(s) on a specific date
+  const deleteLogsForExercise = (exerciseId: string, dateISO: string) => {
+    const exerciseLogs = logs.filter(log => log.exerciseId === exerciseId && log.dateISO === dateISO)
+    exerciseLogs.forEach(log => dispatch(storeActions.logs.remove(log.id)))
+  }
+
+  const deleteLogsForExercises = (exerciseIds: string[], dateISO: string) => {
+    const exerciseLogs = logs.filter(log => exerciseIds.includes(log.exerciseId) && log.dateISO === dateISO)
+    exerciseLogs.forEach(log => dispatch(storeActions.logs.remove(log.id)))
+  }
+
+  // Helper function to handle exercise deletion with confirmation
+  const handleDeleteExercise = (exerciseId: string, dateISO: string, planUpdateFn: () => void) => {
+    const logCount = countLogsForExercise(exerciseId, dateISO)
+    
+    if (logCount > 0) {
+      setDeleteDialog({
+        isOpen: true,
+        type: 'exercise',
+        exerciseId,
+        dateISO,
+        logCount,
+        onConfirm: () => {
+          deleteLogsForExercise(exerciseId, dateISO)
+          planUpdateFn()
+          setDeleteDialog(prev => ({ ...prev, isOpen: false }))
+        }
+      })
+    } else {
+      planUpdateFn()
+    }
+  }
+
+  // Helper function to handle routine deletion with confirmation
+  const handleDeleteRoutine = (exerciseIds: string[], dateISO: string, planUpdateFn: () => void) => {
+    const logCount = countLogsForExercises(exerciseIds, dateISO)
+    
+    if (logCount > 0) {
+      setDeleteDialog({
+        isOpen: true,
+        type: 'routine',
+        exerciseIds,
+        dateISO,
+        logCount,
+        onConfirm: () => {
+          deleteLogsForExercises(exerciseIds, dateISO)
+          planUpdateFn()
+          setDeleteDialog(prev => ({ ...prev, isOpen: false }))
+        }
+      })
+    } else {
+      planUpdateFn()
+    }
+  }
   
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeItem, setActiveItem] = useState<PlanItem | null>(null)
   const [dragMode, setDragMode] = useState<'top-level' | 'within-routine' | null>(null)
   const [activeDragDay, setActiveDragDay] = useState<string | null>(null)
+  
+  // Delete confirmation dialog state
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean
+    type: 'exercise' | 'routine'
+    exerciseId?: string
+    exerciseIds?: string[]
+    dateISO?: string
+    routineIdx?: number
+    exerciseIdx?: number
+    logCount: number
+    onConfirm: () => void
+  }>({
+    isOpen: false,
+    type: 'exercise',
+    logCount: 0,
+    onConfirm: () => {}
+  })
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -344,18 +434,21 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }
               size="icon" 
               variant="ghost" 
               onClick={() => {
-                const currentItems = getPlanItemsForDate(plan, dateISO)
-                const updatedItems = currentItems.map((planItem: PlanItem, planIdx: number) => {
-                  if (planIdx === routineIdx && planItem.type === 'routine') {
-                    const filteredExerciseIds = planItem.exerciseIds.filter((id: string) => id !== exerciseId)
-                    return filteredExerciseIds.length > 0 ? {
-                      ...planItem,
-                      exerciseIds: filteredExerciseIds
-                    } : null
-                  }
-                  return planItem
-                }).filter((item: PlanItem | null): item is PlanItem => item !== null)
-                onPlanUpdate(dateISO, updatedItems)
+                const planUpdateFn = () => {
+                  const currentItems = getPlanItemsForDate(plan, dateISO)
+                  const updatedItems = currentItems.map((planItem: PlanItem, planIdx: number) => {
+                    if (planIdx === routineIdx && planItem.type === 'routine') {
+                      const filteredExerciseIds = planItem.exerciseIds.filter((id: string) => id !== exerciseId)
+                      return filteredExerciseIds.length > 0 ? {
+                        ...planItem,
+                        exerciseIds: filteredExerciseIds
+                      } : null
+                    }
+                    return planItem
+                  }).filter((item: PlanItem | null): item is PlanItem => item !== null)
+                  onPlanUpdate(dateISO, updatedItems)
+                }
+                handleDeleteExercise(exerciseId, dateISO, planUpdateFn)
               }}
               className="h-8 w-8"
             >
@@ -375,7 +468,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }
         </div>
         {currentProgressDetails.length > 0 && (
           <div className="pl-5 mt-1">
-            <div className="text-xs font-medium text-green-700 mb-1">Today's Session:</div>
+            <div className="text-xs font-medium text-green-700 mb-1">{getSessionHeading(dateISO)}:</div>
             <div className="space-y-1">
               {currentProgressDetails.map((detail: string, detailIdx: number) => (
                 <div key={detailIdx} className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
@@ -488,8 +581,11 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }
               <span className="text-xs text-muted-foreground">({item.exerciseIds.length} exercises)</span>
             </div>
             <Button size="icon" variant="ghost" onClick={() => {
-              const currentItems = getPlanItemsForDate(plan, dateISO)
-              onPlanUpdate(dateISO, currentItems.filter((_, i2) => i2 !== idx))
+              const planUpdateFn = () => {
+                const currentItems = getPlanItemsForDate(plan, dateISO)
+                onPlanUpdate(dateISO, currentItems.filter((_, i2) => i2 !== idx))
+              }
+              handleDeleteRoutine(item.exerciseIds, dateISO, planUpdateFn)
             }}>
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -572,8 +668,11 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLogExercise(dateISO, day as DayKey, ex.id)}>Log</Button>
               <Button size="icon" variant="ghost" onClick={() => {
-                const currentItems = getPlanItemsForDate(plan, dateISO)
-                onPlanUpdate(dateISO, currentItems.filter((_, i2) => i2 !== idx))
+                const planUpdateFn = () => {
+                  const currentItems = getPlanItemsForDate(plan, dateISO)
+                  onPlanUpdate(dateISO, currentItems.filter((_, i2) => i2 !== idx))
+                }
+                handleDeleteExercise(ex.id, dateISO, planUpdateFn)
               }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -591,7 +690,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }
           </div>
           {currentProgressDetails.length > 0 && (
             <div className="pl-5 mt-1">
-              <div className="text-xs font-medium text-green-700 mb-1">Today's Session:</div>
+              <div className="text-xs font-medium text-green-700 mb-1">{getSessionHeading(dateISO)}:</div>
               <div className="space-y-1">
                 {currentProgressDetails.map((detail, detailIdx) => (
                   <div key={detailIdx} className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
@@ -655,7 +754,8 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }
                     dayName={day}
                     dateISO={dateISO}
                     isToday={isToday}
-                    onClear={() => onPlanUpdate(dateISO, [])}
+                    onClear={() => onClearPlanDate(dateISO)}
+                    hasItems={dayItems.length > 0}
                   />
                   
                   <PlannerDay.Actions>
@@ -708,6 +808,42 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }
       <DragOverlay dropAnimation={null}>
         {activeItem ? <DragPreview item={activeItem} exercises={exercises} /> : null}
       </DragOverlay>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.isOpen} onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {deleteDialog.type === 'exercise' ? 'Exercise' : 'Routine'}?</DialogTitle>
+            <DialogDescription>
+              {deleteDialog.type === 'exercise' ? (
+                <>
+                  This will remove the exercise from your plan{deleteDialog.logCount > 0 && (
+                    <> and delete {deleteDialog.logCount} associated log{deleteDialog.logCount !== 1 ? 's' : ''}</>
+                  )}. This action cannot be undone.
+                </>
+              ) : (
+                <>
+                  This will remove the routine from your plan{deleteDialog.logCount > 0 && (
+                    <> and delete {deleteDialog.logCount} associated log{deleteDialog.logCount !== 1 ? 's' : ''} from all exercises in this routine</>
+                  )}. This action cannot be undone.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialog(prev => ({ ...prev, isOpen: false }))}>
+              Cancel
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={deleteDialog.onConfirm}
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+            >
+              Delete{deleteDialog.logCount > 0 && ' & Remove Logs'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DndContext>
   )
 }, (prevProps, nextProps) => {

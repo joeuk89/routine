@@ -40,13 +40,15 @@ interface DayHeaderProps {
   dateISO: string
   isToday?: boolean
   onClear?: () => void
+  hasItems?: boolean
 }
 
 PlannerDay.Header = function DayHeader({ 
   dayName, 
   dateISO, 
   isToday = false, 
-  onClear 
+  onClear,
+  hasItems = false
 }: DayHeaderProps) {
   const date = new Date(dateISO + 'T00:00:00Z')
   
@@ -60,8 +62,16 @@ PlannerDay.Header = function DayHeader({
           </span>
         )}
       </div>
-      {onClear && (
-        <Button variant="ghost" size="sm" onClick={onClear}>
+      {onClear && hasItems && (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => {
+            if (confirm(`Are you sure you want to clear all items for ${dayName}? This will also remove any workout logs for this day.`)) {
+              onClear()
+            }
+          }}
+        >
           Clear
         </Button>
       )}

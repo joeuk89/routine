@@ -7,6 +7,7 @@ import type { PlanItem } from '../model/plan'
 
 export interface PlannerActions {
   onPlanUpdate: (dateISO: string, items: PlanItem[]) => void
+  onClearPlanDate: (dateISO: string) => void
   onLogExercise: (dateISO: string, day: DayKey, exerciseId: string) => void
   onWeekNavigate: (direction: 'prev' | 'next' | 'goto', dateISO?: string) => void
 }
@@ -20,6 +21,20 @@ export function usePlannerActions(
   return useMemo(() => ({
     onPlanUpdate: (dateISO: string, items: PlanItem[]) => {
       dispatch(actions.planner.updatePlan(dateISO, items))
+    },
+    
+    onClearPlanDate: (dateISO: string) => {
+      console.log('Clearing plan for date:', dateISO)
+      
+      // Clear the plan first
+      dispatch(actions.planner.updatePlan(dateISO, []))
+      console.log('Plan cleared, now clearing logs...')
+      
+      // Then remove all logs for this date
+      const logAction = actions.logs.removeByDate(dateISO)
+      console.log('Log action to dispatch:', logAction)
+      dispatch(logAction)
+      console.log('Dispatched actions to clear plan and logs')
     },
     
     onLogExercise: (dateISO: string, day: DayKey, exerciseId: string) => {

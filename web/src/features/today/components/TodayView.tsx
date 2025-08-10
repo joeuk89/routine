@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '../../../components/ui/checkbox'
-import { Dumbbell, Calendar } from 'lucide-react'
+import { Dumbbell, Calendar, CheckCircle2 } from 'lucide-react'
 import { useStore } from '@/store/context'
 import { actions } from '@/store/actions'
 import { iso, formatDayLabel, addDaysUTC } from '@/lib/date'
@@ -107,12 +107,9 @@ export function TodayView() {
         <Card key={exercise.id} className="p-4 bg-green-50 border-2 border-green-200 transition-all duration-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Checkbox 
-                id={`checkbox-completed-${exercise.id}`}
-                checked={true}
-                onCheckedChange={() => toggleExerciseCompletion(exercise.id)}
-                className="h-5 w-5"
-              />
+              <span className="text-2xl text-green-600" style={{ filter: 'grayscale(100%) brightness(1.2)' }}>
+                💪
+              </span>
               <div 
                 className="w-4 h-4 rounded-full"
                 style={{ backgroundColor: exercise.color }}
@@ -122,9 +119,12 @@ export function TodayView() {
                 {setsCount} set{setsCount !== 1 ? 's' : ''} completed
               </Badge>
             </div>
-            <span className="text-2xl text-green-600" style={{ filter: 'grayscale(100%) brightness(1.2)' }}>
-              💪
-            </span>
+            <Checkbox 
+              id={`checkbox-completed-${exercise.id}`}
+              checked={true}
+              onCheckedChange={() => toggleExerciseCompletion(exercise.id)}
+              className="h-5 w-5"
+            />
           </div>
         </Card>
       )
@@ -169,20 +169,36 @@ export function TodayView() {
               <div className="text-xl font-bold text-green-600">{pb || 'No data'}</div>
             </div>
             
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-sm font-medium text-gray-600 mb-3">
-                {lastLog ? `Last Session (${formatDayLabel(new Date(lastLog.dateISO))})` : 'Last Session'}
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-white" />
+                </div>
+                <h4 className="text-sm font-bold text-blue-800">Last Session</h4>
+                {lastSessionDetails.length > 0 && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                    {lastSessionDetails.length} set{lastSessionDetails.length !== 1 ? 's' : ''}
+                  </Badge>
+                )}
               </div>
+              {lastLog && (
+                <div className="text-xs font-medium text-blue-600 mb-3 ml-9">
+                  {formatDayLabel(new Date(lastLog.dateISO))}
+                </div>
+              )}
               {lastSessionDetails.length > 0 ? (
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {lastSessionDetails.map((detail, index) => (
-                    <div key={index} className="text-sm text-blue-600 bg-white rounded px-2 py-1">
-                      {detail}
+                    <div key={index} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-blue-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                      <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-blue-600">{index + 1}</span>
+                      </div>
+                      <span className="text-sm font-medium text-blue-800 flex-1">{detail}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-gray-500">No data</div>
+                <div className="text-sm text-blue-600 bg-white rounded-lg px-3 py-2 border border-blue-100">No data</div>
               )}
             </div>
 
@@ -195,12 +211,23 @@ export function TodayView() {
           </div>
 
           {currentProgressDetails.length > 0 && (
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="text-sm font-semibold text-blue-800 mb-3">Today's Session Details</div>
-              <div className="space-y-2">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="text-lg font-bold text-green-800">Today's Session</h4>
+                <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                  {currentProgressDetails.length} set{currentProgressDetails.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
+              <div className="space-y-3">
                 {currentProgressDetails.map((detail, index) => (
-                  <div key={index} className="text-lg text-blue-700 bg-white rounded px-3 py-2">
-                    {detail}
+                  <div key={index} className="flex items-center gap-3 bg-white rounded-lg px-4 py-3 border border-green-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-green-600">{index + 1}</span>
+                    </div>
+                    <span className="text-base font-medium text-green-800 flex-1">{detail}</span>
                   </div>
                 ))}
               </div>
@@ -215,7 +242,7 @@ export function TodayView() {
               onClick={() => setLogTarget({ exercise, currentLog: currentLog ?? null })}
             >
               <Dumbbell className="w-5 h-5 mr-2" />
-              {currentLog ? 'Update Session' : 'Start Session'}
+              Log
             </Button>
           </div>
         </div>

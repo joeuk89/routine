@@ -22,6 +22,7 @@ export function PlannerContainer({ onLog }: PlannerContainerProps) {
     <PlannerPresenter 
       data={plannerData}
       actions={plannerActions}
+      dispatch={dispatch}
     />
   )
 }

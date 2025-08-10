@@ -116,8 +116,11 @@ export function usePlanManager(): PlanManagerActions {
 
   const clearPlanForDate = useCallback((dateISO: string) => {
     try {
+      // Clear the plan first
       dispatch(actions.planner.updatePlan(dateISO, []))
-      toast.success('Cleared plan for date')
+      // Then remove all logs for this date
+      dispatch(actions.logs.removeByDate(dateISO))
+      toast.success('Cleared plan and logs for date')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to clear plan'
       toast.error(message)

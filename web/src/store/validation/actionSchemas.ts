@@ -243,6 +243,12 @@ const LogActionSchemas = {
       id: z.string().min(1, 'Log ID is required')
     })
   }),
+  LOGS_REMOVE_BY_DATE: z.object({
+    type: z.literal('LOGS_REMOVE_BY_DATE'),
+    payload: z.object({
+      dateISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    })
+  }),
   LOGS_SET_LOADING: z.object({
     type: z.literal('LOGS_SET_LOADING'),
     payload: z.object({

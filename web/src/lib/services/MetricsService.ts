@@ -71,11 +71,10 @@ export class MetricsService {
         switch (exercise.type) {
           case 'WEIGHT_REPS':
             if ('weight' in set && 'reps' in set && typeof set.weight === 'number' && typeof set.reps === 'number') {
-              // Calculate estimated 1RM using Epley formula: weight * (1 + reps/30)
-              const estimatedMax = set.weight * (1 + set.reps / 30)
+              // Track the actual best weight achieved (regardless of reps)
               currentBest = {
-                value: estimatedMax,
-                unit: 'estimated 1RM',
+                value: set.weight,
+                unit: 'weight',
                 date: log.dateISO,
                 type: 'weight'
               }
@@ -143,10 +142,10 @@ export class MetricsService {
 
       switch (exercise.type) {
         case 'WEIGHT_REPS':
-          // Use best set's estimated 1RM
+          // Use best set's actual weight
           return Math.max(...sets.map(set => {
             if ('weight' in set && 'reps' in set && typeof set.weight === 'number' && typeof set.reps === 'number') {
-              return set.weight * (1 + set.reps / 30)
+              return set.weight
             }
             return 0
           }))
@@ -381,25 +380,25 @@ export class MetricsService {
       case 'WEIGHT_REPS':
         return sets.map((set: WorkoutSet, index: number) => {
           if ('weight' in set && 'reps' in set) {
-            return `Set ${index + 1}: ${set.reps} × ${set.weight}${massLabel(unit)}`
+            return `${set.reps} × ${set.weight}${massLabel(unit)}`
           }
-          return `Set ${index + 1}: Invalid set type`
+          return `Invalid set type`
         })
 
       case 'HOLD_SECONDS':
         return sets.map((set: WorkoutSet, index: number) => {
           if ('seconds' in set) {
-            return `Set ${index + 1}: ${set.seconds}s`
+            return `${set.seconds}s`
           }
-          return `Set ${index + 1}: Invalid set type`
+          return `Invalid set type`
         })
 
       case 'REPS_ONLY':
         return sets.map((set: WorkoutSet, index: number) => {
           if ('reps' in set) {
-            return `Set ${index + 1}: ${set.reps} reps`
+            return `${set.reps} reps`
           }
-          return `Set ${index + 1}: Invalid set type`
+          return `Invalid set type`
         })
 
       default:
@@ -435,7 +434,7 @@ export class MetricsService {
 
     switch (exercise.type) {
       case 'WEIGHT_REPS':
-        return `${pb.value.toFixed(1)} ${unit.toLowerCase()} (est. 1RM)`
+        return `${pb.value}${massLabel(unit)}`
       case 'HOLD_SECONDS':
         return `${pb.value}s`
       case 'REPS_ONLY':

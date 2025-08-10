@@ -34,14 +34,28 @@ export function AddModal({ exercises, routines, onAddExercise, onAddRoutine }: A
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">What would you like to add?</p>
         <div className="grid gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => setView('exercises')}
-            className="h-16 flex flex-col items-center justify-center gap-2"
-          >
-            <Dumbbell className="w-6 h-6" />
-            <span>Exercise</span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => (exercises?.length || 0) > 0 && setView('exercises')}
+                    disabled={(exercises?.length || 0) === 0}
+                    className="h-16 flex flex-col items-center justify-center gap-2 w-full"
+                  >
+                    <Dumbbell className="w-6 h-6" />
+                    <span>Exercise</span>
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {(exercises?.length || 0) === 0 && (
+                <TooltipContent className="bg-gray-900 text-white border-gray-700">
+                  <p>Create an exercise first in the Exercises tab</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           
           <TooltipProvider>
             <Tooltip>

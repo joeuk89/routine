@@ -144,6 +144,11 @@ export const logActions = {
     payload: { id }
   }),
   
+  removeByDate: (dateISO: string): AppActions => ({
+    type: 'LOGS_REMOVE_BY_DATE',
+    payload: { dateISO }
+  }),
+  
   setLoading: (loading: boolean): AppActions => ({
     type: 'LOGS_SET_LOADING',
     payload: { loading }
