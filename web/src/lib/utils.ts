@@ -4,14 +4,7 @@ import type { MassUnit } from './units'
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-export function safeUrl(url: string): string {
-  try {
-    const u = new URL(url)
-    return u.toString()
-  } catch {
-    return '#'
-  }
-}
+
 
 export function getUnitForExercise(exercise: Exercise, settings: AppSettings): MassUnit {
   if (exercise.type !== 'WEIGHT_REPS') return settings.defaultUnit

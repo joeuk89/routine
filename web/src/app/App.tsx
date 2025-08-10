@@ -9,30 +9,25 @@ import { ExerciseFormModal } from '@/features/exercises/components/ExerciseFormM
 import { ExerciseList } from '@/features/exercises/components/ExerciseList'
 import { RoutineForm } from '@/features/routines/components/RoutineForm'
 import { RoutineList } from '@/features/routines/components/RoutineList'
-import { Planner } from '@/features/planner/components/Planner'
+import { PlannerContainer } from '@/features/planner/containers/PlannerContainer'
 import { LogsTable } from '@/features/logs/components/LogsTable'
 import { SettingsCard } from '@/features/settings/components/SettingsCard'
 import { LogDialog } from '@/features/logs/components/LogDialog'
-import { addDaysUTC, iso, startOfWeekMonday, startOfWeek } from '@/lib/date'
+import { iso, startOfWeek } from '@/lib/date'
 import type { DayKey } from '@/lib/date'
 import { uid } from '@/lib/id'
 import type { LogEntry, LogPayload } from '@/features/logs/model/log'
-import { getLogForExerciseOnDate } from '@/lib/metrics'
+import { logSelectors, exerciseSelectors } from '@/lib/selectors'
+import { useExerciseManager } from '@/features/exercises/hooks/useExerciseManager'
 import { toast } from 'sonner'
-import { getPlanItemsForDate, setPlanItemsForDate } from '@/features/planner/model/plan'
+
 import type { Exercise } from '@/features/exercises/model/types'
 import type { Routine } from '@/features/routines/model/types'
 import type { AppState } from '@/store/rootReducer'
 import { actions } from '@/store/actions'
 
 // Form data interfaces for better type safety
-interface ExerciseFormData {
-  name: string
-  color: string
-  type: import('@/lib/units').ProgressionType
-  refUrl?: string
-  weightUnit?: import('@/lib/units').WeightUnit
-}
+import type { ExerciseFormData } from '@/features/exercises/hooks/useExerciseForm'
 
 interface RoutineFormData {
   name: string
@@ -42,7 +37,7 @@ interface RoutineFormData {
 }
 
 export default function App() {
-  // Placeholder shell; will be replaced with store + features wiring during migration
+
   const [ready, setReady] = useState(false)
   useEffect(() => setReady(true), [])
   return (
@@ -57,21 +52,47 @@ export default function App() {
 
 function InnerApp() {
   const { state, dispatch } = useStore()
-  const weekStart = new Date(state.planner.currentWeekStartISO + 'T00:00:00Z')
+  const exerciseManager = useExerciseManager()
   const [logTarget, setLogTarget] = useState<{ day: DayKey; dateISO: string; exerciseId: string } | null>(null)
   const [showExerciseModal, setShowExerciseModal] = useState(false)
   const [showRoutineModal, setShowRoutineModal] = useState(false)
 
   // No longer need ensureWeek - date-based plan handles all dates automatically
 
-  function addExercise(e: ExerciseFormData) {
-    dispatch(actions.exercises.add(e as Exercise))
+  function addExercise(exercise: Exercise) {
+    // Convert Exercise to ExerciseFormData and call the manager
+    const formData: ExerciseFormData = {
+      name: exercise.name,
+      color: exercise.color,
+      type: exercise.type,
+      weightUnit: exercise.weightUnit || 'DEFAULT',
+      refUrl: exercise.refUrl || ''
+    }
+    
+    exerciseManager.addExercise(formData).catch(() => {
+      // Error is already handled by the hook with toast notifications
+    })
   }
-  function removeExercise(id: string) {
-    dispatch(actions.exercises.remove(id))
+  async function removeExercise(id: string) {
+    try {
+      await exerciseManager.deleteExercise(id)
+    } catch (error) {
+      // Error is already handled by the hook with toast notifications
+    }
   }
-  function editExercise(updated: Exercise) {
-    dispatch(actions.exercises.update(updated))
+  async function editExercise(updated: Exercise) {
+    try {
+      const formData = {
+        name: updated.name,
+        color: updated.color,
+        type: updated.type,
+        weightUnit: updated.weightUnit || 'DEFAULT',
+        refUrl: updated.refUrl || ''
+      }
+      await exerciseManager.updateExercise(updated.id, formData)
+    } catch (error) {
+      // Error is already handled by the hook with toast notifications
+    }
   }
   function addRoutine(r: RoutineFormData) {
     dispatch(actions.routines.add(r as Routine))
@@ -82,9 +103,7 @@ function InnerApp() {
   function editRoutine(updated: Routine) {
     dispatch(actions.routines.update(updated))
   }
-  function updatePlan(dateISO: string, items: import('@/features/planner/model/plan').PlanItem[]) {
-    dispatch(actions.planner.updatePlan(dateISO, items))
-  }
+
   function openLog(dateISO: string, day: DayKey, exerciseId: string) {
     const todayISO = iso(new Date())
     if (dateISO > todayISO) return
@@ -94,8 +113,8 @@ function InnerApp() {
     if (!logTarget) return
     
     // Check if there's already a log for this exercise on this date
-    const logs = state.logs.allIds.map(id => state.logs.byId[id])
-    const existingLog = getLogForExerciseOnDate(logs, logTarget.exerciseId, logTarget.dateISO)
+    const existingLog = logSelectors.getForDate(state, logTarget.dateISO)
+      .find(log => log.exerciseId === logTarget.exerciseId)
     
     if (existingLog) {
       // Update existing log
@@ -133,46 +152,19 @@ function InnerApp() {
     toast('Google Drive sync coming soon. We\'ll use Drive API + file picker to save/load JSON.')
   }
 
-  function prevWeek() {
-    const prev = addDaysUTC(weekStart, -7)
-    const key = iso(prev)
-    dispatch(actions.planner.setCurrentWeek(key))
-  }
-  function nextWeek() {
-    const next = addDaysUTC(weekStart, 7)
-    const key = iso(next)
-    dispatch(actions.planner.setCurrentWeek(key))
-  }
-  function goToWeekContaining(dateISO: string) {
-    const date = new Date(dateISO + 'T00:00:00Z')
-    const weekStartDay = state.settings.preferences.weekStartDay || 'Monday'
-    const weekStart = startOfWeek(date, weekStartDay)
-    const key = iso(weekStart)
-    dispatch(actions.planner.setCurrentWeek(key))
-  }
 
-  // Calculate the actual dates for the current week
-  const settings = state.settings.preferences
-  const weekStartDay = settings.weekStartDay || 'Monday'
-  // Generate 7 consecutive dates starting from currentWeekStartISO
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const date = addDaysUTC(weekStart, i)
-    return iso(date)
-  })
-  const exercises = useMemo(() => 
-    state.exercises.allIds.map(id => state.exercises.byId[id]), 
-    [state.exercises]
-  )
-  const logs = useMemo(() => 
-    state.logs.allIds.map(id => state.logs.byId[id]), 
-    [state.logs]
-  )
+
+  const exercises = exerciseSelectors.getAll(state)
+  const logs = logSelectors.getForDateRange(state, '1900-01-01', '2200-12-31') // Get all logs
   const routines = useMemo(() => 
     state.routines.allIds.map(id => state.routines.byId[id]), 
     [state.routines]
   )
+  const settings = state.settings.preferences
   const currentExercise = exercises.find((e) => e.id === logTarget?.exerciseId) || null
-  const currentExistingLog = logTarget ? getLogForExerciseOnDate(logs, logTarget.exerciseId, logTarget.dateISO) || null : null
+  const currentExistingLog = logTarget ? 
+    logSelectors.getForDate(state, logTarget.dateISO)
+      .find(log => log.exerciseId === logTarget.exerciseId) || null : null
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -190,7 +182,7 @@ function InnerApp() {
           <TodayView />
         </TabsContent>
         <TabsContent value="plan" className="mt-4">
-          <Planner weekStartISO={state.planner.currentWeekStartISO} plan={state.planner.plan} exercises={exercises} routines={routines} logs={logs} settings={settings} updatePlan={updatePlan} onLog={openLog} onPrevWeek={prevWeek} onNextWeek={nextWeek} onGoToWeek={goToWeekContaining} />
+          <PlannerContainer onLog={openLog} />
         </TabsContent>
         <TabsContent value="exercises" className="mt-4 space-y-4">
           <div className="flex justify-between items-center">
@@ -199,7 +191,13 @@ function InnerApp() {
               Add Exercise
             </Button>
           </div>
-          <ExerciseList exercises={exercises} onRemove={removeExercise} onEdit={editExercise} />
+          <ExerciseList 
+            items={exercises} 
+            actions={{
+              onUpdate: editExercise,
+              onDelete: removeExercise
+            }}
+          />
         </TabsContent>
         <TabsContent value="routines" className="mt-4 space-y-4">
           <div className="flex justify-between items-center">
@@ -208,7 +206,14 @@ function InnerApp() {
               Add Routine
             </Button>
           </div>
-          <RoutineList routines={routines} exercises={exercises} onRemove={removeRoutine} onEdit={editRoutine} />
+          <RoutineList 
+            items={routines} 
+            exercises={exercises} 
+            actions={{
+              onUpdate: editRoutine,
+              onDelete: removeRoutine
+            }}
+          />
         </TabsContent>
         <TabsContent value="logs" className="mt-4">
           <LogsTable logs={logs} exercises={exercises} settings={settings} />

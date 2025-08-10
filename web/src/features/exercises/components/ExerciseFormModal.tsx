@@ -2,11 +2,11 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { toast } from 'sonner'
 import type { Exercise } from '../model/types'
 import type { ProgressionType, WeightUnit } from '@/lib/units'
-import { uid } from '@/lib/id'
+import { useExerciseForm } from '../hooks/useExerciseForm'
 
 interface ExerciseFormModalProps {
   open: boolean
@@ -15,48 +15,27 @@ interface ExerciseFormModalProps {
 }
 
 export function ExerciseFormModal({ open, onOpenChange, onAdd }: ExerciseFormModalProps) {
-  const [name, setName] = useState('')
-  const [color, setColor] = useState('#3b82f6')
-  const [type, setType] = useState<ProgressionType>('WEIGHT_REPS')
-  const [weightUnit, setWeightUnit] = useState<WeightUnit>('DEFAULT')
-  const [refUrl, setRefUrl] = useState('')
+  const { formData, updateField, reset, submitWithToast } = useExerciseForm({
+    color: '#3b82f6' // Different default color for modal
+  })
+
+  // Reset form when modal is closed
+  useEffect(() => {
+    if (!open) {
+      reset({ color: '#3b82f6' })
+    }
+  }, [open, reset])
 
   function handleSubmit() {
-    if (!name.trim()) {
-      toast('Please enter an exercise name')
-      return
-    }
-
-    const exercise: Exercise = {
-      id: uid(),
-      name: name.trim(),
-      color,
-      type,
-      weightUnit: type === 'WEIGHT_REPS' ? weightUnit : undefined,
-      refUrl: refUrl.trim() || undefined,
-    }
-
-    onAdd(exercise)
-    
-    // Reset form
-    setName('')
-    setColor('#3b82f6')
-    setType('WEIGHT_REPS')
-    setWeightUnit('DEFAULT')
-    setRefUrl('')
-    
-    onOpenChange(false)
-    toast.success('Exercise created!')
+    const success = submitWithToast((exercise) => {
+      onAdd(exercise)
+      onOpenChange(false)
+      toast.success('Exercise created!')
+    })
   }
 
   function handleCancel() {
-    // Reset form
-    setName('')
-    setColor('#3b82f6')
-    setType('WEIGHT_REPS')
-    setWeightUnit('DEFAULT')
-    setRefUrl('')
-    
+    reset({ color: '#3b82f6' })
     onOpenChange(false)
   }
 
@@ -71,8 +50,8 @@ export function ExerciseFormModal({ open, onOpenChange, onAdd }: ExerciseFormMod
           <div>
             <label className="text-sm font-medium">Name</label>
             <Input 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
+              value={formData.name} 
+              onChange={(e) => updateField('name', e.target.value)} 
               placeholder="Bench Press" 
               className="mt-1"
             />
@@ -83,13 +62,13 @@ export function ExerciseFormModal({ open, onOpenChange, onAdd }: ExerciseFormMod
             <div className="flex gap-2 mt-1">
               <input 
                 type="color" 
-                value={color} 
-                onChange={(e) => setColor(e.target.value)} 
+                value={formData.color} 
+                onChange={(e) => updateField('color', e.target.value)} 
                 className="h-10 w-16 rounded border"
               />
               <Input 
-                value={color} 
-                onChange={(e) => setColor(e.target.value)} 
+                value={formData.color} 
+                onChange={(e) => updateField('color', e.target.value)} 
                 placeholder="#3b82f6"
               />
             </div>
@@ -97,7 +76,7 @@ export function ExerciseFormModal({ open, onOpenChange, onAdd }: ExerciseFormMod
 
           <div>
             <label className="text-sm font-medium">Type</label>
-            <Select value={type} onValueChange={(v: ProgressionType) => setType(v)}>
+            <Select value={formData.type} onValueChange={(v: ProgressionType) => updateField('type', v)}>
               <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>
@@ -110,10 +89,10 @@ export function ExerciseFormModal({ open, onOpenChange, onAdd }: ExerciseFormMod
             </Select>
           </div>
 
-          {type === 'WEIGHT_REPS' && (
+          {formData.type === 'WEIGHT_REPS' && (
             <div>
               <label className="text-sm font-medium">Weight Unit</label>
-              <Select value={weightUnit} onValueChange={(v: WeightUnit) => setWeightUnit(v)}>
+              <Select value={formData.weightUnit} onValueChange={(v: WeightUnit) => updateField('weightUnit', v)}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
                 </SelectTrigger>
@@ -129,8 +108,8 @@ export function ExerciseFormModal({ open, onOpenChange, onAdd }: ExerciseFormMod
           <div>
             <label className="text-sm font-medium">Reference URL (optional)</label>
             <Input 
-              value={refUrl} 
-              onChange={(e) => setRefUrl(e.target.value)} 
+              value={formData.refUrl} 
+              onChange={(e) => updateField('refUrl', e.target.value)} 
               placeholder="https://example.com/how-to-bench-press" 
               className="mt-1"
             />

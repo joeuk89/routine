@@ -2,30 +2,108 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Trash2, List, Edit, Dumbbell, Calendar } from 'lucide-react'
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import type { Routine } from '../model/types'
 import type { Exercise } from '@/features/exercises/model/types'
 import { RoutineEditDialog } from './RoutineEditDialog'
+import type { ListComponentProps, CRUDActions } from '@/lib/types/componentInterfaces'
+import { validateListComponentProps } from '@/lib/utils/propValidation'
 
-export function RoutineList({ routines, exercises, onRemove, onEdit }: { routines: Routine[]; exercises: Exercise[]; onRemove: (id: string) => void; onEdit: (routine: Routine) => void }) {
+/**
+ * RoutineList displays a list of workout routines with CRUD operations.
+ * 
+ * @param items - Array of routines to display
+ * @param exercises - Array of exercises for reference
+ * @param loading - Whether the list is in loading state
+ * @param error - Error message to display if operation failed
+ * @param actions - Callback functions for routine operations
+ * @param emptyState - Custom component to show when list is empty
+ * @param className - Additional CSS classes
+ * 
+ * @example
+ * ```tsx
+ * <RoutineList
+ *   items={routines}
+ *   exercises={exercises}
+ *   actions={{
+ *     onUpdate: handleUpdateRoutine,
+ *     onDelete: handleDeleteRoutine
+ *   }}
+ * />
+ * ```
+ */
+interface RoutineListProps extends ListComponentProps<Routine> {
+  /** Array of exercises for reference */
+  exercises: Exercise[]
+}
+
+export const RoutineList = memo(function RoutineList({ 
+  items,
+  exercises, 
+  loading = false,
+  error = null,
+  actions,
+  emptyState,
+  className 
+}: RoutineListProps) {
+  // Development-time prop validation
+  validateListComponentProps('RoutineList', { items, actions })
+  
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null)
-  if (routines.length === 0) {
+
+  // Clean action handlers
+  const handleDelete = (id: string) => {
+    actions?.onDelete?.(id)
+  }
+
+  const handleUpdate = (routine: Routine) => {
+    actions?.onUpdate?.(routine)
+  }
+
+  // Loading state
+  if (loading) {
     return (
-      <Card className="shadow-sm">
+      <Card className={`shadow-sm ${className || ''}`}>
         <CardContent className="p-6 text-center">
-          <List className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-          <h3 className="text-lg font-medium mb-2">No routines yet</h3>
-          <p className="text-sm text-muted-foreground">Create your first routine to get started</p>
+          <p className="text-sm text-muted-foreground">Loading routines...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Card className={`shadow-sm ${className || ''}`}>
+        <CardContent className="p-6 text-center">
+          <p className="text-sm text-red-600">{error}</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Empty state
+  if (items.length === 0) {
+    return (
+      <Card className={`shadow-sm ${className || ''}`}>
+        <CardContent className="p-6 text-center">
+          {emptyState || (
+            <>
+              <List className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+              <h3 className="text-lg font-medium mb-2">No routines yet</h3>
+              <p className="text-sm text-muted-foreground">Create your first routine to get started</p>
+            </>
+          )}
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className={`shadow-sm ${className || ''}`}>
       <CardContent className="p-0">
         <div className="divide-y divide-gray-100">
-          {routines.map((routine, index) => (
+          {items.map((routine, index) => (
             <div 
               key={routine.id} 
               className="group p-4 hover:bg-gray-50/50 transition-colors duration-150"
@@ -92,7 +170,7 @@ export function RoutineList({ routines, exercises, onRemove, onEdit }: { routine
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    onClick={() => onRemove(routine.id)}
+                    onClick={() => handleDelete(routine.id)}
                     className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -109,11 +187,25 @@ export function RoutineList({ routines, exercises, onRemove, onEdit }: { routine
           routine={editingRoutine}
           exercises={exercises}
           onSave={(routine) => {
-            onEdit(routine)
+            handleUpdate(routine)
             setEditingRoutine(null)
           }}
         />
       </CardContent>
     </Card>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function to optimize re-renders
+  return (
+    prevProps.items === nextProps.items &&
+    prevProps.exercises === nextProps.exercises &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.error === nextProps.error &&
+    prevProps.actions === nextProps.actions &&
+    prevProps.emptyState === nextProps.emptyState &&
+    prevProps.className === nextProps.className
+  )
+})
+
+// Development-only display name
+RoutineList.displayName = 'RoutineList'

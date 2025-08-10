@@ -8,12 +8,13 @@ import type { LogEntry } from '@/features/logs/model/log'
 import type { AppSettings } from '@/features/settings/model/settings'
 import { addDaysUTC, dayOrder, formatDayLabel, iso, startOfWeekMonday, startOfWeek, getDayOrder, getDateForDayInWeek, type DayKey } from '@/lib/date'
 import { getPlanItemsForDate } from '@/features/planner/model/plan'
-import { computePB, latestLogForExerciseBeforeDate, getLogForExerciseOnDate, getCurrentProgressDetails } from '@/lib/metrics'
+import { MetricsService } from '@/lib/services/MetricsService'
+import { logSelectors } from '@/lib/selectors'
 import { getUnitForExercise } from '@/lib/utils'
 import type { MassUnit } from '@/lib/units'
-// No longer need drag constraint utilities since we allow all same-day reordering
 import { LastSessionPopover } from './LastSessionPopover'
 import { AddModal } from './AddModal'
+import { PlannerDay } from './PlannerDay'
 import {
   DndContext,
   closestCenter,
@@ -35,10 +36,12 @@ import {
 import {
   CSS,
 } from '@dnd-kit/utilities'
-import { useState } from 'react'
+import { useState, memo } from 'react'
+import type { PlannerData } from '../hooks/usePlannerData'
+import type { PlannerActions } from '../hooks/usePlannerActions'
 
 // Simplified drag preview component
-function DragPreview({ item, exercises }: { item: PlanItem; exercises: Exercise[] }) {
+const DragPreview = memo(function DragPreview({ item, exercises }: { item: PlanItem; exercises: Exercise[] }) {
   if (item.type === 'routine') {
     return (
       <div className="bg-white border-2 border-gray-300 rounded-lg px-3 py-2 shadow-lg flex items-center gap-2">
@@ -58,10 +61,10 @@ function DragPreview({ item, exercises }: { item: PlanItem; exercises: Exercise[
       </div>
     )
   }
-}
+})
 
 // Simplified bar component for drag mode
-function SimplifiedBar({ item, exercises }: { item: PlanItem; exercises: Exercise[] }) {
+const SimplifiedBar = memo(function SimplifiedBar({ item, exercises }: { item: PlanItem; exercises: Exercise[] }) {
   if (item.type === 'routine') {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-2">
@@ -81,163 +84,17 @@ function SimplifiedBar({ item, exercises }: { item: PlanItem; exercises: Exercis
       </div>
     )
   }
+})
+
+export interface PlannerPresenterProps {
+  data: PlannerData
+  actions: PlannerActions
 }
 
-// Sortable component for exercises within routines
-function SortableRoutineExercise({ 
-  id, 
-  exercise, 
-  exerciseId, 
-  exerciseIdx, 
-  routineIdx, 
-  day, 
-  dateISO, 
-  isFuture, 
-  unit, 
-  lastLog, 
-  pb, 
-  currentLog, 
-  currentProgressDetails, 
-  logs, 
-  onLog, 
-  plan, 
-  updatePlan, 
-  weekStartISO, 
-  weekStartDay,
-  onGoToWeek,
-  dragMode,
-  activeId,
-  activeDragDay
-}: {
-  id: string
-  exercise: Exercise
-  exerciseId: string
-  exerciseIdx: number
-  routineIdx: number
-  day: string
-  dateISO: string
-  isFuture: boolean
-  unit: MassUnit
-  lastLog: LogEntry | undefined
-  pb: string
-  currentLog: LogEntry | undefined
-  currentProgressDetails: string[]
-  logs: LogEntry[]
-  onLog: (dateISO: string, day: DayKey, exerciseId: string) => void
-  plan: Plan
-  updatePlan: (dateISO: string, items: PlanItem[]) => void
-  weekStartISO: string
-  weekStartDay: DayKey
-  onGoToWeek: (dateISO: string) => void
-  dragMode: 'top-level' | 'within-routine' | null
-  activeId: string | null
-  activeDragDay: string | null
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ 
-    id,
-    disabled: false // Allow all exercises within routines to be dragged
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
-  const canDrag = true // Allow all exercises within routines to be dragged
-
-  // Show simplified bar in within-routine drag mode only for the active drag day
-  if (dragMode === 'within-routine' && activeId && activeDragDay === day) {
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="relative"
-      >
-        <SimplifiedBar item={{ type: 'exercise', id: exerciseId }} exercises={[exercise]} />
-      </div>
-    )
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex flex-col gap-1 rounded-xl border p-2 bg-white"
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {canDrag && (
-            <div 
-              className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 p-1 -ml-1"
-              {...attributes}
-              {...listeners}
-            >
-              <GripVertical className="h-4 w-4 text-gray-400" />
-            </div>
-          )}
-          <span className="inline-block h-3 w-3 rounded" style={{ background: exercise.color }} />
-          <span>{exercise.name}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day as DayKey, exerciseId)}>Log</Button>
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            onClick={() => {
-              const currentItems = getPlanItemsForDate(plan, dateISO)
-              const updatedItems = currentItems.map((planItem: PlanItem, planIdx: number) => {
-                if (planIdx === routineIdx && planItem.type === 'routine') {
-                  const filteredExerciseIds = planItem.exerciseIds.filter((id: string) => id !== exerciseId)
-                  return filteredExerciseIds.length > 0 ? {
-                    ...planItem,
-                    exerciseIds: filteredExerciseIds
-                  } : null
-                }
-                return planItem
-              }).filter((item: any) => item !== null)
-              updatePlan(dateISO, updatedItems)
-            }}
-            className="h-8 w-8"
-          >
-            <Trash2 className="w-3 h-3" />
-          </Button>
-        </div>
-      </div>
-      <div className="text-xs text-black/60 flex flex-wrap gap-3 pl-5">
-        {exercise.refUrl && (
-          <a className="inline-flex items-center underline" href={exercise.refUrl} target="_blank" rel="noreferrer">
-            <LinkIcon className="w-3 h-3 mr-1" /> Reference
-          </a>
-        )}
-        <span className="inline-flex items-center"><Trophy className="w-3 h-3 mr-1"/>PB: {pb}</span>
-        <LastSessionPopover exercise={exercise} lastLog={lastLog} unit={unit} currentWeekStartISO={weekStartISO} weekStartDay={weekStartDay} onGoToWeek={onGoToWeek} />
-        {isFuture && <span className="text-[10px] uppercase tracking-wide">Future day — logging disabled</span>}
-      </div>
-      {currentProgressDetails.length > 0 && (
-        <div className="pl-5 mt-1">
-          <div className="text-xs font-medium text-green-700 mb-1">Today's Session:</div>
-          <div className="space-y-1">
-            {currentProgressDetails.map((detail: string, detailIdx: number) => (
-              <div key={detailIdx} className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                {detail}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-export function Planner({ weekStartISO, plan, exercises, routines, logs, settings, updatePlan, onLog, onPrevWeek, onNextWeek, onGoToWeek }: { weekStartISO: string; plan: Plan; exercises: Exercise[]; routines: Routine[]; logs: LogEntry[]; settings: AppSettings; updatePlan: (dateISO: string, items: PlanItem[]) => void; onLog: (dateISO: string, day: import('@/lib/date').DayKey, exerciseId: string) => void; onPrevWeek: () => void; onNextWeek: () => void; onGoToWeek: (dateISO: string) => void }) {
+export const PlannerPresenter = memo(function PlannerPresenter({ data, actions }: PlannerPresenterProps) {
+  const { weekStartISO, plan, exercises, routines, logs, settings } = data
+  const { onPlanUpdate, onLogExercise, onWeekNavigate } = actions
+  
   const weekStart = new Date(weekStartISO + 'T00:00:00Z')
   const todayISO = iso(new Date())
   const weekStartDay = settings.weekStartDay || 'Monday'
@@ -247,7 +104,7 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
   
   // Function to go to current week
   const goToThisWeek = () => {
-    onGoToWeek(thisWeekStartISO)
+    onWeekNavigate('goto', thisWeekStartISO)
   }
 
   // Helper function to convert logical day name to actual dateISO for current week
@@ -340,7 +197,7 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
     const items = [...getPlanItemsForDate(plan, activeDateISO)]
     const [moved] = items.splice(activeItemIndex, 1)
     items.splice(overItemIndex, 0, moved)
-    updatePlan(activeDateISO, items)
+    onPlanUpdate(activeDateISO, items)
   }
 
   function handleRoutineExerciseReorder(activeId: string, overId: string) {
@@ -375,7 +232,161 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
       idx === activeRoutineIdx ? { ...item, exerciseIds } : item
     )
     
-    updatePlan(activeDateISO, updatedItems)
+    onPlanUpdate(activeDateISO, updatedItems)
+  }
+
+  // Sortable component for exercises within routines
+  function SortableRoutineExercise({ 
+    id, 
+    exercise, 
+    exerciseId, 
+    exerciseIdx, 
+    routineIdx, 
+    day, 
+    dateISO, 
+    isFuture, 
+    unit, 
+    lastLog, 
+    pb, 
+    currentLog, 
+    currentProgressDetails, 
+    logs, 
+    onLog, 
+    plan, 
+    updatePlan, 
+    weekStartISO, 
+    weekStartDay,
+    onGoToWeek,
+    dragMode,
+    activeId,
+    activeDragDay
+  }: {
+    id: string
+    exercise: Exercise
+    exerciseId: string
+    exerciseIdx: number
+    routineIdx: number
+    day: string
+    dateISO: string
+    isFuture: boolean
+    unit: MassUnit
+    lastLog: LogEntry | undefined
+    pb: string
+    currentLog: LogEntry | undefined
+    currentProgressDetails: string[]
+    logs: LogEntry[]
+    onLog: (dateISO: string, day: DayKey, exerciseId: string) => void
+    plan: Plan
+    updatePlan: (dateISO: string, items: PlanItem[]) => void
+    weekStartISO: string
+    weekStartDay: DayKey
+    onGoToWeek: (dateISO: string) => void
+    dragMode: 'top-level' | 'within-routine' | null
+    activeId: string | null
+    activeDragDay: string | null
+  }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ 
+      id,
+      disabled: false // Allow all exercises within routines to be dragged
+    })
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    }
+
+    const canDrag = true // Allow all exercises within routines to be dragged
+
+    // Show simplified bar in within-routine drag mode only for the active drag day
+    if (dragMode === 'within-routine' && activeId && activeDragDay === day) {
+      return (
+        <div
+          ref={setNodeRef}
+          style={style}
+          className="relative"
+        >
+          <SimplifiedBar item={{ type: 'exercise', id: exerciseId }} exercises={[exercise]} />
+        </div>
+      )
+    }
+
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="flex flex-col gap-1 rounded-xl border p-2 bg-white"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {canDrag && (
+              <div 
+                className="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 p-1 -ml-1"
+                {...attributes}
+                {...listeners}
+              >
+                <GripVertical className="h-4 w-4 text-gray-400" />
+              </div>
+            )}
+            <span className="inline-block h-3 w-3 rounded" style={{ background: exercise.color }} />
+            <span>{exercise.name}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day as DayKey, exerciseId)}>Log</Button>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              onClick={() => {
+                const currentItems = getPlanItemsForDate(plan, dateISO)
+                const updatedItems = currentItems.map((planItem: PlanItem, planIdx: number) => {
+                  if (planIdx === routineIdx && planItem.type === 'routine') {
+                    const filteredExerciseIds = planItem.exerciseIds.filter((id: string) => id !== exerciseId)
+                    return filteredExerciseIds.length > 0 ? {
+                      ...planItem,
+                      exerciseIds: filteredExerciseIds
+                    } : null
+                  }
+                  return planItem
+                }).filter((item: PlanItem | null): item is PlanItem => item !== null)
+                onPlanUpdate(dateISO, updatedItems)
+              }}
+              className="h-8 w-8"
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        </div>
+        <div className="text-xs text-black/60 flex flex-wrap gap-3 pl-5">
+          {exercise.refUrl && (
+            <a className="inline-flex items-center underline" href={exercise.refUrl} target="_blank" rel="noreferrer">
+              <LinkIcon className="w-3 h-3 mr-1" /> Reference
+            </a>
+          )}
+          <span className="inline-flex items-center"><Trophy className="w-3 h-3 mr-1"/>PB: {pb}</span>
+          <LastSessionPopover exercise={exercise} lastLog={lastLog} unit={unit} currentWeekStartISO={weekStartISO} weekStartDay={weekStartDay} onGoToWeek={onGoToWeek} />
+          {isFuture && <span className="text-[10px] uppercase tracking-wide">Future day — logging disabled</span>}
+        </div>
+        {currentProgressDetails.length > 0 && (
+          <div className="pl-5 mt-1">
+            <div className="text-xs font-medium text-green-700 mb-1">Today's Session:</div>
+            <div className="space-y-1">
+              {currentProgressDetails.map((detail: string, detailIdx: number) => (
+                <div key={detailIdx} className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                  {detail}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   // Create sortable plan item component for both exercises and routines
@@ -478,7 +489,7 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
             </div>
             <Button size="icon" variant="ghost" onClick={() => {
               const currentItems = getPlanItemsForDate(plan, dateISO)
-              updatePlan(dateISO, currentItems.filter((_, i2) => i2 !== idx))
+              onPlanUpdate(dateISO, currentItems.filter((_, i2) => i2 !== idx))
             }}>
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -494,10 +505,10 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
                 const ex = exercises.find((e) => e.id === exerciseId)
                 if (!ex) return null
                 const unit = getUnitForExercise(ex, settings)
-                const lastLog = latestLogForExerciseBeforeDate(logs, ex.id, dateISO)
-                const pb = computePB(ex, logs, unit)
-                const currentLog = getLogForExerciseOnDate(logs, ex.id, dateISO)
-                const currentProgressDetails = getCurrentProgressDetails(ex, currentLog, unit)
+                const lastLog = MetricsService.getLatestLogBeforeDate(logs, ex.id, dateISO)
+                const pb = MetricsService.formatPersonalBest(ex, logs, unit)
+                const currentLog = MetricsService.getLogOnDate(logs, ex.id, dateISO)
+                const currentProgressDetails = MetricsService.getCurrentProgressDetails(ex, currentLog, unit)
                 
                 return (
                   <SortableRoutineExercise
@@ -516,12 +527,12 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
                     currentLog={currentLog}
                     currentProgressDetails={currentProgressDetails}
                     logs={logs}
-                    onLog={onLog}
+                    onLog={onLogExercise}
                     plan={plan}
-                    updatePlan={updatePlan}
+                    updatePlan={onPlanUpdate}
                     weekStartISO={weekStartISO}
                     weekStartDay={weekStartDay}
-                    onGoToWeek={onGoToWeek}
+                    onGoToWeek={(dateISO) => onWeekNavigate('goto', dateISO)}
                     dragMode={dragMode}
                     activeId={activeId}
                     activeDragDay={activeDragDay}
@@ -537,10 +548,10 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
       const ex = exercises.find((e) => e.id === item.id)
       if (!ex) return null
       const unit = getUnitForExercise(ex, settings)
-      const lastLog = latestLogForExerciseBeforeDate(logs, ex.id, dateISO)
-      const pb = computePB(ex, logs, unit)
-      const currentLog = getLogForExerciseOnDate(logs, ex.id, dateISO)
-      const currentProgressDetails = getCurrentProgressDetails(ex, currentLog, unit)
+      const lastLog = MetricsService.getLatestLogBeforeDate(logs, ex.id, dateISO)
+      const pb = MetricsService.formatPersonalBest(ex, logs, unit)
+      const currentLog = MetricsService.getLogOnDate(logs, ex.id, dateISO)
+      const currentProgressDetails = MetricsService.getCurrentProgressDetails(ex, currentLog, unit)
       
       return (
         <div className="flex flex-col gap-1 rounded-xl border p-2">
@@ -559,10 +570,10 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
               <span>{ex.name}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day as DayKey, ex.id)}>Log</Button>
+              <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLogExercise(dateISO, day as DayKey, ex.id)}>Log</Button>
               <Button size="icon" variant="ghost" onClick={() => {
                 const currentItems = getPlanItemsForDate(plan, dateISO)
-                updatePlan(dateISO, currentItems.filter((_, i2) => i2 !== idx))
+                onPlanUpdate(dateISO, currentItems.filter((_, i2) => i2 !== idx))
               }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -575,7 +586,7 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
               </a>
             )}
             <span className="inline-flex items-center"><Trophy className="w-3 h-3 mr-1"/>PB: {pb}</span>
-            <LastSessionPopover exercise={ex} lastLog={lastLog} unit={unit} currentWeekStartISO={weekStartISO} weekStartDay={weekStartDay} onGoToWeek={onGoToWeek} />
+            <LastSessionPopover exercise={ex} lastLog={lastLog} unit={unit} currentWeekStartISO={weekStartISO} weekStartDay={weekStartDay} onGoToWeek={(dateISO) => onWeekNavigate('goto', dateISO)} />
             {isFuture && <span className="text-[10px] uppercase tracking-wide">Future day — logging disabled</span>}
           </div>
           {currentProgressDetails.length > 0 && (
@@ -596,7 +607,7 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
   }
 
   return (
-        <DndContext
+    <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
@@ -615,11 +626,11 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
                   This Week
                 </Button>
               )}
-              <Button variant="outline" size="icon" onClick={onPrevWeek}>
+              <Button variant="outline" size="icon" onClick={() => onWeekNavigate('prev')}>
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <div className="text-sm text-black/60">{formatDayLabel(weekStart)} – {formatDayLabel(addDaysUTC(weekStart, 6))}</div>
-              <Button variant="outline" size="icon" onClick={onNextWeek}>
+              <Button variant="outline" size="icon" onClick={() => onWeekNavigate('next')}>
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -633,23 +644,29 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
               const dayItems = getPlanItemsForDate(plan, dateISO)
               
               return (
-                <div key={day} className={`border rounded-2xl p-3 ${isToday ? 'border-blue-500 bg-blue-50/50 shadow-sm' : ''}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className={`font-medium ${isToday ? 'text-blue-700' : ''}`}>
-                      {day} • {formatDayLabel(date)}
-                      {isToday && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Today</span>}
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => updatePlan(dateISO, [])}>Clear</Button>
-                  </div>
-                  <div className="flex gap-2 mb-2">
+                <PlannerDay 
+                  key={day} 
+                  dateISO={dateISO}
+                  dayName={day}
+                  isToday={isToday}
+                  isFuture={isFuture}
+                >
+                  <PlannerDay.Header 
+                    dayName={day}
+                    dateISO={dateISO}
+                    isToday={isToday}
+                    onClear={() => onPlanUpdate(dateISO, [])}
+                  />
+                  
+                  <PlannerDay.Actions>
                     <AddModal
                       exercises={exercises}
                       routines={routines}
-                      onAddExercise={(exerciseId) => updatePlan(dateISO, [...dayItems, { type: 'exercise', id: exerciseId }])}
+                      onAddExercise={(exerciseId) => onPlanUpdate(dateISO, [...dayItems, { type: 'exercise', id: exerciseId }])}
                       onAddRoutine={(routineId) => {
                         const routine = routines.find(r => r.id === routineId)
                         if (routine) {
-                          updatePlan(dateISO, [...dayItems, { 
+                          onPlanUpdate(dateISO, [...dayItems, { 
                             type: 'routine', 
                             name: routine.name,
                             color: routine.color || '#3b82f6',
@@ -658,12 +675,13 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
                         }
                       }}
                     />
-                  </div>
+                  </PlannerDay.Actions>
+                  
                   <SortableContext 
                     items={dayItems.map((_, idx) => `${day}-${idx}`)} 
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="flex flex-col gap-3 min-h-[48px] p-1">
+                    <PlannerDay.Content>
                       {dayItems.map((item, idx) => (
                         <SortablePlanItem
                           key={`${day}-${idx}`}
@@ -678,9 +696,9 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
                           activeDragDay={activeDragDay}
                         />
                       ))}
-                    </div>
+                    </PlannerDay.Content>
                   </SortableContext>
-                </div>
+                </PlannerDay>
               )
             })}
           </div>
@@ -692,4 +710,17 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
       </DragOverlay>
     </DndContext>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function to optimize re-renders for complex planner
+  return (
+    prevProps.data.weekStartISO === nextProps.data.weekStartISO &&
+    prevProps.data.plan === nextProps.data.plan &&
+    prevProps.data.exercises === nextProps.data.exercises &&
+    prevProps.data.routines === nextProps.data.routines &&
+    prevProps.data.logs === nextProps.data.logs &&
+    prevProps.data.settings === nextProps.data.settings &&
+    prevProps.actions.onPlanUpdate === nextProps.actions.onPlanUpdate &&
+    prevProps.actions.onLogExercise === nextProps.actions.onLogExercise &&
+    prevProps.actions.onWeekNavigate === nextProps.actions.onWeekNavigate
+  )
+})

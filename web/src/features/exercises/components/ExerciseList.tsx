@@ -4,32 +4,94 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Dumbbell, LinkIcon, Pencil, Trash2, ExternalLink } from 'lucide-react'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import type { Exercise } from '../model/types'
 import type { ProgressionType, WeightUnit } from '@/lib/units'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { ExerciseService } from '../services/ExerciseService'
+import type { ListComponentProps, CRUDActions } from '@/lib/types/componentInterfaces'
+import { validateListComponentProps } from '@/lib/utils/propValidation'
 
-export function ExerciseList({ exercises, onRemove, onEdit }: { exercises: Exercise[]; onRemove: (id: string) => void; onEdit: (e: Exercise) => void }) {
+/**
+ * ExerciseList displays a sortable list of exercises with CRUD operations.
+ * 
+ * @param items - Array of exercises to display
+ * @param loading - Whether the list is in loading state
+ * @param error - Error message to display if operation failed
+ * @param actions - Callback functions for exercise operations
+ * @param renderItem - Custom render function for exercise items (optional)
+ * @param emptyState - Custom component to show when list is empty (optional)
+ * @param className - Additional CSS classes (optional)
+ * 
+ * @example
+ * ```tsx
+ * <ExerciseList
+ *   items={exercises}
+ *   loading={isLoading}
+ *   actions={{
+ *     onUpdate: handleUpdateExercise,
+ *     onDelete: handleDeleteExercise
+ *   }}
+ * />
+ * ```
+ */
+interface ExerciseListProps extends ListComponentProps<Exercise> {}
+
+export const ExerciseList = memo(function ExerciseList({ 
+  items,
+  loading = false,
+  error = null,
+  actions,
+  emptyState,
+  className 
+}: ExerciseListProps) {
+  // Development-time prop validation
+  validateListComponentProps('ExerciseList', { items, actions })
+  
   const [editing, setEditing] = useState<Exercise | null>(null)
   const [form, setForm] = useState<Exercise | null>(null)
 
-  // Sort exercises alphabetically
+  // Sort exercises alphabetically using service
   const sortedExercises = useMemo(() => {
-    return exercises.sort((a, b) => a.name.localeCompare(b.name))
-  }, [exercises])
+    return ExerciseService.sortByName(items)
+  }, [items])
+
+  // Clean action handlers
+  const handleDelete = (id: string) => {
+    actions?.onDelete?.(id)
+  }
+
+  const handleUpdate = (exercise: Exercise) => {
+    actions?.onUpdate?.(exercise)
+  }
 
   function openEdit(e: Exercise) {
     setEditing(e)
     setForm({ ...e })
   }
   function save() {
-    if (!form) return
-    onEdit(form)
-    setEditing(null)
+    if (!form || !editing) return
+    
+    try {
+      // Use ExerciseService to validate the updated form data
+      const formData = ExerciseService.toFormData(form)
+      const validation = ExerciseService.validate(formData)
+      
+      if (!validation.success) {
+        // Handle validation errors - could show toast or set form errors
+        console.error('Validation failed:', validation.errors)
+        return
+      }
+      
+      handleUpdate(form)
+      setEditing(null)
+    } catch (error) {
+      console.error('Failed to save exercise:', error)
+    }
   }
 
   return (
-    <Card className="shadow-sm">
+    <Card className={`shadow-sm ${className || ''}`}>
       <CardContent className="p-0">
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
@@ -38,11 +100,31 @@ export function ExerciseList({ exercises, onRemove, onEdit }: { exercises: Exerc
           </div>
         </div>
         
-        {exercises.length === 0 ? (
+        {/* Loading state */}
+        {loading && (
           <div className="p-6 text-center">
-            <p className="text-sm text-muted-foreground">No exercises yet. Add some above.</p>
+            <p className="text-sm text-muted-foreground">Loading exercises...</p>
           </div>
-        ) : (
+        )}
+        
+        {/* Error state */}
+        {error && (
+          <div className="p-6 text-center">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+        
+        {/* Empty state */}
+        {!loading && !error && items.length === 0 && (
+          emptyState || (
+            <div className="p-6 text-center">
+              <p className="text-sm text-muted-foreground">No exercises yet. Add some above.</p>
+            </div>
+          )
+        )}
+        
+        {/* Exercise list */}
+        {!loading && !error && items.length > 0 && (
           <div className="divide-y divide-gray-100">
             {sortedExercises.map((exercise) => (
               <div 
@@ -105,7 +187,7 @@ export function ExerciseList({ exercises, onRemove, onEdit }: { exercises: Exerc
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      onClick={() => onRemove(exercise.id)}
+                      onClick={() => handleDelete(exercise.id)}
                       className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -163,6 +245,17 @@ export function ExerciseList({ exercises, onRemove, onEdit }: { exercises: Exerc
       </CardContent>
     </Card>
   )
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function to optimize re-renders
+  return (
+    prevProps.items === nextProps.items &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.error === nextProps.error &&
+    prevProps.actions === nextProps.actions &&
+    prevProps.emptyState === nextProps.emptyState &&
+    prevProps.className === nextProps.className
+  )
+})
 
-
+// Development-only display name
+ExerciseList.displayName = 'ExerciseList'

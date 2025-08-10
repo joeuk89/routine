@@ -4,7 +4,7 @@ import { History, Calendar } from 'lucide-react'
 import type { Exercise } from '@/features/exercises/model/types'
 import type { LogEntry } from '@/features/logs/model/log'
 import type { MassUnit } from '@/lib/units'
-import { getCurrentProgressDetails } from '@/lib/metrics'
+import { MetricsService } from '@/lib/services/MetricsService'
 import { formatDayLabel, startOfWeekMonday, startOfWeek, iso } from '@/lib/date'
 import type { DayKey } from '@/lib/date'
 
@@ -30,7 +30,7 @@ interface LastSessionPopoverProps {
 }
 
 export function LastSessionPopover({ exercise, lastLog, unit, currentWeekStartISO, weekStartDay, onGoToWeek }: LastSessionPopoverProps) {
-  const lastSessionDetails = getCurrentProgressDetails(exercise, lastLog, unit)
+  const lastSessionDetails = MetricsService.getCurrentProgressDetails(exercise, lastLog, unit)
   
   if (!lastLog || lastSessionDetails.length === 0) {
     return <span className="inline-flex items-center"><History className="w-3 h-3 mr-1"/>Last session: —</span>

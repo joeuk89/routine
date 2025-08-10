@@ -9,7 +9,7 @@ import { Dumbbell, Calendar } from 'lucide-react'
 import { useStore } from '@/store/context'
 import { actions } from '@/store/actions'
 import { iso, formatDayLabel, addDaysUTC } from '@/lib/date'
-import { computePB, latestLogForExerciseBeforeDate, getLogForExerciseOnDate, getCurrentProgressDetails } from '@/lib/metrics'
+import { MetricsService } from '@/lib/services/MetricsService'
 import { uid } from '@/lib/id'
 import type { Exercise } from '@/features/exercises/model/types'
 import type { LogEntry } from '@/features/logs/model/log'
@@ -93,11 +93,11 @@ export function TodayView() {
 
   const renderExerciseCard = (exercise: Exercise) => {
     const safelogs = logs || []
-    const pb = computePB(exercise, safelogs, settings.defaultUnit)
-    const lastLog = latestLogForExerciseBeforeDate(safelogs, exercise.id, today)
-    const currentLog = getLogForExerciseOnDate(safelogs, exercise.id, today)
-    const currentProgressDetails = getCurrentProgressDetails(exercise, currentLog, settings.defaultUnit)
-    const lastSessionDetails = getCurrentProgressDetails(exercise, lastLog, settings.defaultUnit)
+    const pb = MetricsService.formatPersonalBest(exercise, safelogs, settings.defaultUnit)
+    const lastLog = MetricsService.getLatestLogBeforeDate(safelogs, exercise.id, today)
+    const currentLog = MetricsService.getLogOnDate(safelogs, exercise.id, today)
+    const currentProgressDetails = MetricsService.getCurrentProgressDetails(exercise, currentLog, settings.defaultUnit)
+    const lastSessionDetails = MetricsService.getCurrentProgressDetails(exercise, lastLog, settings.defaultUnit)
     const isCompleted = completedExercises.has(exercise.id)
     const setsCount = currentProgressDetails.length
 
