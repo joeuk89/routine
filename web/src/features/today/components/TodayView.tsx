@@ -1,0 +1,320 @@
+import { useMemo, useState } from 'react'
+import { LogDialog } from '@/features/logs/components/LogDialog'
+import { AddModal } from '@/features/planner/components/AddModal'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '../../../components/ui/checkbox'
+import { Dumbbell, Calendar } from 'lucide-react'
+import { useStore } from '@/store/context'
+import { iso, formatDayLabel, addDaysUTC } from '@/lib/date'
+import { computePB, latestLogForExerciseBeforeDate, getLogForExerciseOnDate, getCurrentProgressDetails } from '@/lib/metrics'
+import { uid } from '@/lib/id'
+import type { Exercise } from '@/features/exercises/model/types'
+import type { LogEntry } from '@/features/logs/model/log'
+import type { PlanItem } from '@/features/planner/model/plan'
+import { getPlanItemsForDate } from '@/features/planner/model/plan'
+
+export function TodayView() {
+  const { state, dispatch } = useStore()
+  const { exercises, logs, plan, settings } = state
+  const [logTarget, setLogTarget] = useState<{ exercise: Exercise; currentLog: LogEntry | null } | null>(null)
+  const [completedExercises, setCompletedExercises] = useState<Set<string>>(new Set())
+
+  const today = useMemo(() => {
+    const now = new Date()
+    return iso(now)
+  }, [])
+
+  const todayDayKey = useMemo(() => {
+    const date = new Date(today)
+    return date.getDay() === 0 ? 'Sunday' : 
+           date.getDay() === 1 ? 'Monday' :
+           date.getDay() === 2 ? 'Tuesday' :
+           date.getDay() === 3 ? 'Wednesday' :
+           date.getDay() === 4 ? 'Thursday' :
+           date.getDay() === 5 ? 'Friday' : 'Saturday'
+  }, [today])
+
+  const todayPlan = getPlanItemsForDate(plan, today)
+
+  const updateTodayPlan = (items: PlanItem[]) => {
+    dispatch({
+      type: 'UPDATE_PLAN',
+      payload: { dateISO: today, items }
+    })
+  }
+
+  const onAddExercise = (exerciseId: string) => {
+    updateTodayPlan([...todayPlan, { type: 'exercise', id: exerciseId }])
+  }
+
+  const onAddRoutine = (routineId: string) => {
+    const routine = state.routines.find(r => r.id === routineId)
+    if (!routine) return
+    
+    updateTodayPlan([...todayPlan, {
+      type: 'routine',
+      name: routine.name,
+      color: routine.color || '#3b82f6',
+      exerciseIds: routine.exerciseIds
+    }])
+  }
+
+  const exerciseById = useMemo(() => {
+    return Object.fromEntries(exercises.map(ex => [ex.id, ex]))
+  }, [exercises])
+
+  const toggleExerciseCompletion = (exerciseId: string) => {
+    console.log('Toggling completion for:', exerciseId)
+    setCompletedExercises(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(exerciseId)) {
+        console.log('Removing from completed')
+        newSet.delete(exerciseId)
+      } else {
+        console.log('Adding to completed')
+        newSet.add(exerciseId)
+      }
+      return newSet
+    })
+  }
+
+  const renderExerciseCard = (exercise: Exercise) => {
+    const safelogs = logs || []
+    const pb = computePB(exercise, safelogs, settings.defaultUnit)
+    const lastLog = latestLogForExerciseBeforeDate(safelogs, exercise.id, today)
+    const currentLog = getLogForExerciseOnDate(safelogs, exercise.id, today)
+    const currentProgressDetails = getCurrentProgressDetails(exercise, currentLog, settings.defaultUnit)
+    const lastSessionDetails = getCurrentProgressDetails(exercise, lastLog, settings.defaultUnit)
+    const isCompleted = completedExercises.has(exercise.id)
+    const setsCount = currentProgressDetails.length
+
+    // Simplified completed view
+    if (isCompleted) {
+      return (
+        <Card key={exercise.id} className="p-4 bg-green-50 border-2 border-green-200 transition-all duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Checkbox 
+                id={`checkbox-completed-${exercise.id}`}
+                checked={true}
+                onCheckedChange={() => toggleExerciseCompletion(exercise.id)}
+                className="h-5 w-5"
+              />
+              <div 
+                className="w-4 h-4 rounded-full"
+                style={{ backgroundColor: exercise.color }}
+              />
+              <span className="text-lg font-semibold text-green-800">{exercise.name}</span>
+              <Badge variant="secondary" className="bg-green-100 text-green-700">
+                {setsCount} set{setsCount !== 1 ? 's' : ''} completed
+              </Badge>
+            </div>
+            <span className="text-2xl text-green-600" style={{ filter: 'grayscale(100%) brightness(1.2)' }}>
+              💪
+            </span>
+          </div>
+        </Card>
+      )
+    }
+
+    // Full exercise card view
+    return (
+      <Card key={exercise.id} className="p-8 bg-white border-2 hover:shadow-lg transition-all duration-200">
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div 
+              className="w-6 h-6 rounded-full border-2 border-gray-300"
+              style={{ backgroundColor: exercise.color }}
+            />
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">{exercise.name}</h3>
+              <Badge variant="secondary" className="mt-2 text-sm">
+                {exercise.type.replace(/_/g, ' ').toLowerCase()}
+              </Badge>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <label 
+              className="flex items-center gap-2 text-sm font-medium text-gray-600 cursor-pointer select-none"
+              htmlFor={`checkbox-${exercise.id}`}
+            >
+              <Checkbox 
+                id={`checkbox-${exercise.id}`}
+                checked={false}
+                onCheckedChange={() => toggleExerciseCompletion(exercise.id)}
+                className="h-5 w-5"
+              />
+              Mark Complete
+            </label>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-sm font-medium text-gray-600 mb-1">Personal Best</div>
+              <div className="text-xl font-bold text-green-600">{pb || 'No data'}</div>
+            </div>
+            
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-sm font-medium text-gray-600 mb-3">
+                {lastLog ? `Last Session (${formatDayLabel(new Date(lastLog.dateISO))})` : 'Last Session'}
+              </div>
+              {lastSessionDetails.length > 0 ? (
+                <div className="space-y-1">
+                  {lastSessionDetails.map((detail, index) => (
+                    <div key={index} className="text-sm text-blue-600 bg-white rounded px-2 py-1">
+                      {detail}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">No data</div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="text-sm font-medium text-gray-600 mb-1">Today's Progress</div>
+              <div className="text-xl font-bold text-purple-600">
+                {currentProgressDetails.length > 0 ? `${currentProgressDetails.length} sets logged` : 'Not started'}
+              </div>
+            </div>
+          </div>
+
+          {currentProgressDetails.length > 0 && (
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="text-sm font-semibold text-blue-800 mb-3">Today's Session Details</div>
+              <div className="space-y-2">
+                {currentProgressDetails.map((detail, index) => (
+                  <div key={index} className="text-lg text-blue-700 bg-white rounded px-3 py-2">
+                    {detail}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button 
+              size="lg" 
+              variant="primary-gradient"
+              className="flex-1 text-lg py-4"
+              onClick={() => setLogTarget({ exercise, currentLog: currentLog ?? null })}
+            >
+              <Dumbbell className="w-5 h-5 mr-2" />
+              {currentLog ? 'Update Session' : 'Start Session'}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto p-6 space-y-8">
+      {/* Header */}
+      <div className="text-center space-y-4">
+        <div className="flex items-center justify-center gap-3">
+          <Calendar className="w-8 h-8 text-blue-600" />
+          <h1 className="text-4xl font-bold text-gray-900">Today's Workout</h1>
+        </div>
+        <p className="text-xl text-gray-600">{formatDayLabel(new Date(today))}</p>
+        <AddModal
+          exercises={exercises}
+          routines={state.routines}
+          onAddExercise={onAddExercise}
+          onAddRoutine={onAddRoutine}
+        />
+      </div>
+
+      {/* Workout Plan */}
+      <div className="space-y-6">
+        {todayPlan.length === 0 ? (
+          <Card className="p-12 text-center">
+            <div className="space-y-4">
+              <Dumbbell className="w-16 h-16 text-gray-400 mx-auto" />
+              <h3 className="text-2xl font-semibold text-gray-700">No workout planned for today</h3>
+              <p className="text-lg text-gray-500">Add some exercises or routines to get started!</p>
+            </div>
+          </Card>
+        ) : (
+          todayPlan.map((item, idx) => {
+            if (item.type === 'exercise') {
+              const exercise = exerciseById[item.id]
+              if (!exercise) return null
+              
+              return renderExerciseCard(exercise)
+            } else {
+              // Routine group
+              return (
+                <div key={idx} className="space-y-4">
+                  {/* Routine Header */}
+                  <Card className="p-6 border-l-4" style={{ borderLeftColor: item.color }}>
+                    <div className="flex items-center gap-4">
+                      <div 
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <h2 className="text-2xl font-bold text-gray-900">{item.name}</h2>
+                      <Badge variant="outline" className="text-sm">
+                        {item.exerciseIds.length} exercises
+                      </Badge>
+                    </div>
+                  </Card>
+
+                  {/* Routine Exercises */}
+                  <div className="space-y-4 ml-8">
+                    {item.exerciseIds.map((exerciseId) => {
+                      const exercise = exerciseById[exerciseId]
+                      if (!exercise) return null
+                      
+                      return renderExerciseCard(exercise)
+                    })}
+                  </div>
+                </div>
+              )
+            }
+          })
+        )}
+      </div>
+
+      {/* Log Dialog Modal */}
+      <LogDialog
+        open={!!logTarget}
+        onOpenChange={() => setLogTarget(null)}
+        exercise={logTarget?.exercise || null}
+        settings={settings}
+        day={todayDayKey}
+        dateISO={today}
+        existingLog={logTarget?.currentLog ?? null}
+        onSave={(payload) => {
+          if (!logTarget) return
+          
+          if (logTarget.currentLog) {
+            // Update existing log
+            dispatch({ 
+              type: 'UPDATE_LOG', 
+              payload: { id: logTarget.currentLog.id, payload } 
+            })
+          } else {
+            // Create new log
+            const entry: LogEntry = { 
+              id: uid(), 
+              day: todayDayKey, 
+              exerciseId: logTarget.exercise.id, 
+              dateISO: today, 
+              payload 
+            }
+            dispatch({ 
+              type: 'SAVE_LOG', 
+              payload: { entry } 
+            })
+          }
+          setLogTarget(null)
+        }}
+      />
+    </div>
+  )
+}
