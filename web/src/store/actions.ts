@@ -1,6 +1,10 @@
 import type { Exercise } from '@/features/exercises/model/types'
 import type { Routine } from '@/features/routines/model/types'
 import type { DayKey } from '@/lib/date'
+import type { PlanItem } from '@/features/planner/model/plan'
+import type { LogEntry, LogPayload } from '@/features/logs/model/log'
+import type { AppSettings } from '@/features/settings/model/settings'
+import type { AppState } from './state'
 
 export type Actions =
   | { type: 'ADD_EXERCISE'; payload: Exercise }
@@ -10,14 +14,14 @@ export type Actions =
   | { type: 'REMOVE_ROUTINE'; payload: { id: string } }
   | { type: 'EDIT_ROUTINE'; payload: Routine }
   | { type: 'REORDER_ROUTINE_EXERCISES'; payload: { routineId: string; exerciseIds: string[] } }
-  | { type: 'UPDATE_PLAN'; payload: { dateISO: string; items: import('@/features/planner/model/plan').PlanItem[] } }
-  | { type: 'REORDER_PLAN_ITEMS'; payload: { dateISO: string; items: import('@/features/planner/model/plan').PlanItem[] } }
-  | { type: 'SAVE_LOG'; payload: { entry: import('@/features/logs/model/log').LogEntry } }
-  | { type: 'UPDATE_LOG'; payload: { id: string; payload: any } }
-  | { type: 'SET_SETTINGS'; payload: Partial<import('@/features/settings/model/settings').AppSettings> }
+  | { type: 'UPDATE_PLAN'; payload: { dateISO: string; items: PlanItem[] } }
+  | { type: 'REORDER_PLAN_ITEMS'; payload: { dateISO: string; items: PlanItem[] } }
+  | { type: 'SAVE_LOG'; payload: { entry: LogEntry } }
+  | { type: 'UPDATE_LOG'; payload: { id: string; payload: LogPayload } }
+  | { type: 'SET_SETTINGS'; payload: Partial<AppSettings> }
   | { type: 'RECALCULATE_CURRENT_WEEK'; payload: {} }
   | { type: 'SET_CURRENT_WEEK'; payload: { weekStartISO: string } }
-  | { type: 'REPLACE_ALL'; payload: import('./state').AppState }
-  | { type: 'LOAD_FROM_STORAGE'; payload: import('./state').AppState }
+  | { type: 'REPLACE_ALL'; payload: AppState }
+  | { type: 'LOAD_FROM_STORAGE'; payload: AppState }
 
 

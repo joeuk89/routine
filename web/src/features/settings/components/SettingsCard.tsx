@@ -15,7 +15,7 @@ export function SettingsCard({ settings, onChange }: { settings: AppSettings; on
         <div className="grid md:grid-cols-2 gap-3">
           <div>
             <label className="text-sm">Default Weight Unit</label>
-            <Select value={settings.defaultUnit} onValueChange={(v: any) => onChange({ ...settings, defaultUnit: v })}>
+            <Select value={settings.defaultUnit} onValueChange={(v: import('@/lib/units').MassUnit) => onChange({ ...settings, defaultUnit: v })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>

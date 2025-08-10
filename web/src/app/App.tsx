@@ -16,10 +16,29 @@ import { LogDialog } from '@/features/logs/components/LogDialog'
 import { addDaysUTC, iso, startOfWeekMonday, startOfWeek } from '@/lib/date'
 import type { DayKey } from '@/lib/date'
 import { uid } from '@/lib/id'
-import type { LogEntry } from '@/features/logs/model/log'
+import type { LogEntry, LogPayload } from '@/features/logs/model/log'
 import { getLogForExerciseOnDate } from '@/lib/metrics'
 import { toast } from 'sonner'
 import { getPlanItemsForDate, setPlanItemsForDate } from '@/features/planner/model/plan'
+import type { Exercise } from '@/features/exercises/model/types'
+import type { Routine } from '@/features/routines/model/types'
+import type { AppState } from '@/store/state'
+
+// Form data interfaces for better type safety
+interface ExerciseFormData {
+  name: string
+  color: string
+  type: import('@/lib/units').ProgressionType
+  refUrl?: string
+  weightUnit?: import('@/lib/units').WeightUnit
+}
+
+interface RoutineFormData {
+  name: string
+  description?: string
+  exerciseIds: string[]
+  color?: string
+}
 
 export default function App() {
   // Placeholder shell; will be replaced with store + features wiring during migration
@@ -44,22 +63,22 @@ function InnerApp() {
 
   // No longer need ensureWeek - date-based plan handles all dates automatically
 
-  function addExercise(e: any) {
-    dispatch({ type: 'ADD_EXERCISE', payload: e })
+  function addExercise(e: ExerciseFormData) {
+    dispatch({ type: 'ADD_EXERCISE', payload: e as Exercise })
   }
   function removeExercise(id: string) {
     dispatch({ type: 'REMOVE_EXERCISE', payload: { id } })
   }
-  function editExercise(updated: any) {
+  function editExercise(updated: Exercise) {
     dispatch({ type: 'EDIT_EXERCISE', payload: updated })
   }
-  function addRoutine(r: any) {
-    dispatch({ type: 'ADD_ROUTINE', payload: r })
+  function addRoutine(r: RoutineFormData) {
+    dispatch({ type: 'ADD_ROUTINE', payload: r as Routine })
   }
   function removeRoutine(id: string) {
     dispatch({ type: 'REMOVE_ROUTINE', payload: { id } })
   }
-  function editRoutine(updated: any) {
+  function editRoutine(updated: Routine) {
     dispatch({ type: 'EDIT_ROUTINE', payload: updated })
   }
   function updatePlan(dateISO: string, items: import('@/features/planner/model/plan').PlanItem[]) {
@@ -70,7 +89,7 @@ function InnerApp() {
     if (dateISO > todayISO) return
     setLogTarget({ day, dateISO, exerciseId })
   }
-  function saveLog(payload: any) {
+  function saveLog(payload: LogPayload) {
     if (!logTarget) return
     
     // Check if there's already a log for this exercise on this date
@@ -89,7 +108,7 @@ function InnerApp() {
     
     setLogTarget(null)
   }
-  function exportImportReplace(s: any) {
+  function exportImportReplace(s: AppState) {
     dispatch({ type: 'REPLACE_ALL', payload: s })
   }
   function resetAll() {
@@ -97,7 +116,15 @@ function InnerApp() {
       const today = new Date()
       const currentWeekStart = startOfWeek(today, 'Monday')
       const key = iso(currentWeekStart)
-      dispatch({ type: 'REPLACE_ALL', payload: { exercises: [], routines: [], logs: [], settings: { defaultUnit: 'KG', weekStartDay: 'Monday' }, currentWeekStartISO: key, plan: {} } as any })
+      const resetState: AppState = { 
+        exercises: [], 
+        routines: [], 
+        logs: [], 
+        settings: { defaultUnit: 'KG', weekStartDay: 'Monday' }, 
+        currentWeekStartISO: key, 
+        plan: {} 
+      }
+      dispatch({ type: 'REPLACE_ALL', payload: resetState })
       toast('Reset complete')
     }
   }
@@ -193,9 +220,9 @@ function InnerApp() {
         onAdd={addExercise}
       />
       
-      <RoutineForm
-        open={showRoutineModal}
-        onOpenChange={setShowRoutineModal}
+              <RoutineForm
+          open={showRoutineModal}
+          onOpenChange={setShowRoutineModal}
         exercises={state.exercises}
         onSubmit={addRoutine}
       />

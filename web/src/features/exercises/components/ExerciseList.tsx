@@ -129,7 +129,7 @@ export function ExerciseList({ exercises, onRemove, onEdit }: { exercises: Exerc
                   <input type="color" value={form.color} onChange={(e) => setForm({ ...(form as Exercise), color: e.target.value })} />
                   <Input value={form.color} onChange={(e) => setForm({ ...(form as Exercise), color: e.target.value })} />
                 </div>
-                <Select value={form.type} onValueChange={(v: any) => setForm({ ...(form as Exercise), type: v as ProgressionType })}>
+                <Select value={form.type} onValueChange={(v: ProgressionType) => setForm({ ...(form as Exercise), type: v })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -141,7 +141,7 @@ export function ExerciseList({ exercises, onRemove, onEdit }: { exercises: Exerc
                   </SelectContent>
                 </Select>
                 {form.type === 'WEIGHT_REPS' && (
-                  <Select value={form.weightUnit || 'DEFAULT'} onValueChange={(v: any) => setForm({ ...(form as Exercise), weightUnit: v as WeightUnit })}>
+                  <Select value={form.weightUnit || 'DEFAULT'} onValueChange={(v: WeightUnit) => setForm({ ...(form as Exercise), weightUnit: v })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Unit" />
                     </SelectTrigger>

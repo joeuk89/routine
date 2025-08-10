@@ -6,10 +6,11 @@ import type { Exercise } from '@/features/exercises/model/types'
 import type { Routine } from '@/features/routines/model/types'
 import type { LogEntry } from '@/features/logs/model/log'
 import type { AppSettings } from '@/features/settings/model/settings'
-import { addDaysUTC, dayOrder, formatDayLabel, iso, startOfWeekMonday, startOfWeek, getDayOrder, getDateForDayInWeek } from '@/lib/date'
+import { addDaysUTC, dayOrder, formatDayLabel, iso, startOfWeekMonday, startOfWeek, getDayOrder, getDateForDayInWeek, type DayKey } from '@/lib/date'
 import { getPlanItemsForDate } from '@/features/planner/model/plan'
 import { computePB, latestLogForExerciseBeforeDate, getLogForExerciseOnDate, getCurrentProgressDetails } from '@/lib/metrics'
 import { getUnitForExercise } from '@/lib/utils'
+import type { MassUnit } from '@/lib/units'
 // No longer need drag constraint utilities since we allow all same-day reordering
 import { LastSessionPopover } from './LastSessionPopover'
 import { AddModal } from './AddModal'
@@ -107,7 +108,31 @@ function SortableRoutineExercise({
   dragMode,
   activeId,
   activeDragDay
-}: any) {
+}: {
+  id: string
+  exercise: Exercise
+  exerciseId: string
+  exerciseIdx: number
+  routineIdx: number
+  day: string
+  dateISO: string
+  isFuture: boolean
+  unit: MassUnit
+  lastLog: LogEntry | undefined
+  pb: string
+  currentLog: LogEntry | undefined
+  currentProgressDetails: string[]
+  logs: LogEntry[]
+  onLog: (dateISO: string, day: DayKey, exerciseId: string) => void
+  plan: Plan
+  updatePlan: (dateISO: string, items: PlanItem[]) => void
+  weekStartISO: string
+  weekStartDay: DayKey
+  onGoToWeek: (dateISO: string) => void
+  dragMode: 'top-level' | 'within-routine' | null
+  activeId: string | null
+  activeDragDay: string | null
+}) {
   const {
     attributes,
     listeners,
@@ -162,13 +187,13 @@ function SortableRoutineExercise({
           <span>{exercise.name}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day, exerciseId)}>Log</Button>
+          <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day as DayKey, exerciseId)}>Log</Button>
           <Button 
             size="icon" 
             variant="ghost" 
             onClick={() => {
               const currentItems = getPlanItemsForDate(plan, dateISO)
-              const updatedItems = currentItems.map((planItem: any, planIdx: number) => {
+              const updatedItems = currentItems.map((planItem: PlanItem, planIdx: number) => {
                 if (planIdx === routineIdx && planItem.type === 'routine') {
                   const filteredExerciseIds = planItem.exerciseIds.filter((id: string) => id !== exerciseId)
                   return filteredExerciseIds.length > 0 ? {
@@ -414,7 +439,7 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
         style={style}
         className="relative"
       >
-        {renderPlanItemContent(item, index, day, dateISO, isFuture, canDrag, attributes, listeners, dragMode, activeId)}
+        {renderPlanItemContent(item, index, day, dateISO, isFuture, dragMode, activeId, canDrag, attributes, listeners)}
       </div>
     )
   }
@@ -426,11 +451,11 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
     day: string, 
     dateISO: string, 
     isFuture: boolean, 
+    dragMode: 'top-level' | 'within-routine' | null,
+    activeId: string | null,
     canDrag: boolean = false,
     attributes?: any,
-    listeners?: any,
-    dragMode?: 'top-level' | 'within-routine' | null,
-    activeId?: string | null
+    listeners?: any
   ) {
     if (item.type === 'routine') {
       return (
@@ -534,7 +559,7 @@ export function Planner({ weekStartISO, plan, exercises, routines, logs, setting
               <span>{ex.name}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day as any, ex.id)}>Log</Button>
+              <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day as DayKey, ex.id)}>Log</Button>
               <Button size="icon" variant="ghost" onClick={() => {
                 const currentItems = getPlanItemsForDate(plan, dateISO)
                 updatePlan(dateISO, currentItems.filter((_, i2) => i2 !== idx))

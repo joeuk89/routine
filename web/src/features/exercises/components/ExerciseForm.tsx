@@ -39,7 +39,7 @@ export function ExerciseForm({ onAdd }: { onAdd: (e: Exercise) => void }) {
         </div>
         <div>
           <label className="text-sm">Progression Type</label>
-          <Select value={type} onValueChange={(v: any) => setType(v)}>
+          <Select value={type} onValueChange={(v: ProgressionType) => setType(v)}>
             <SelectTrigger>
               <SelectValue placeholder="Type" />
             </SelectTrigger>
@@ -54,7 +54,7 @@ export function ExerciseForm({ onAdd }: { onAdd: (e: Exercise) => void }) {
         {type === 'WEIGHT_REPS' && (
           <div>
             <label className="text-sm">Weight Unit</label>
-            <Select value={weightUnit} onValueChange={(v: any) => setWeightUnit(v)}>
+            <Select value={weightUnit} onValueChange={(v: WeightUnit) => setWeightUnit(v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Unit" />
               </SelectTrigger>
