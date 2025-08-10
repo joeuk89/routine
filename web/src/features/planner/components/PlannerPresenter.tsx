@@ -17,6 +17,7 @@ import { LastSessionPopover } from './LastSessionPopover'
 import { AddModal } from './AddModal'
 import { PlannerDay } from './PlannerDay'
 import { actions as storeActions } from '@/store/actions'
+import { uid } from '@/lib/id'
 import {
   DndContext,
   closestCenter,
@@ -49,11 +50,11 @@ const DragPreview = memo(function DragPreview({ item, exercises }: { item: PlanI
       <div className="bg-white border-2 border-gray-300 rounded-lg px-3 py-2 shadow-lg flex items-center gap-2">
         <span className="inline-block h-3 w-3 rounded" style={{ background: item.color }} />
         <span className="font-medium text-sm">{item.name}</span>
-        <span className="text-xs text-gray-500">({item.exerciseIds.length} exercises)</span>
+        <span className="text-xs text-gray-500">({item.exercises.length} exercises)</span>
       </div>
     )
   } else {
-    const exercise = exercises.find(e => e.id === item.id)
+    const exercise = exercises.find(e => e.id === item.exerciseId)
     if (!exercise) return null
     
     return (
@@ -72,11 +73,11 @@ const SimplifiedBar = memo(function SimplifiedBar({ item, exercises }: { item: P
       <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-2">
         <span className="inline-block h-3 w-3 rounded" style={{ background: item.color }} />
         <span className="font-medium text-sm">{item.name}</span>
-        <span className="text-xs text-gray-500">({item.exerciseIds.length} exercises)</span>
+        <span className="text-xs text-gray-500">({item.exercises.length} exercises)</span>
       </div>
     )
   } else {
-    const exercise = exercises.find(e => e.id === item.id)
+    const exercise = exercises.find(e => e.id === item.exerciseId)
     if (!exercise) return null
     
     return (
@@ -120,18 +121,18 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
     return dateISO < todayISO ? 'Session Details' : 'Today\'s Session'
   }
 
-  // Helper function to count logs for exercise(s) on a specific date
-  const countLogsForExercise = (exerciseId: string, dateISO: string): number => {
-    return logs.filter(log => log.exerciseId === exerciseId && log.dateISO === dateISO).length
+  // Helper function to count logs for exercise instance on a specific date
+  const countLogsForExercise = (exerciseId: string, instanceId: string, dateISO: string): number => {
+    return logs.filter(log => log.exerciseId === exerciseId && log.instanceId === instanceId && log.dateISO === dateISO).length
   }
 
   const countLogsForExercises = (exerciseIds: string[], dateISO: string): number => {
     return logs.filter(log => exerciseIds.includes(log.exerciseId) && log.dateISO === dateISO).length
   }
 
-  // Helper function to delete logs for exercise(s) on a specific date
-  const deleteLogsForExercise = (exerciseId: string, dateISO: string) => {
-    const exerciseLogs = logs.filter(log => log.exerciseId === exerciseId && log.dateISO === dateISO)
+  // Helper function to delete logs for exercise instance on a specific date
+  const deleteLogsForExercise = (exerciseId: string, instanceId: string, dateISO: string) => {
+    const exerciseLogs = logs.filter(log => log.exerciseId === exerciseId && log.instanceId === instanceId && log.dateISO === dateISO)
     exerciseLogs.forEach(log => dispatch(storeActions.logs.remove(log.id)))
   }
 
@@ -141,8 +142,8 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
   }
 
   // Helper function to handle exercise deletion with confirmation
-  const handleDeleteExercise = (exerciseId: string, dateISO: string, planUpdateFn: () => void) => {
-    const logCount = countLogsForExercise(exerciseId, dateISO)
+  const handleDeleteExercise = (exerciseId: string, instanceId: string, dateISO: string, planUpdateFn: () => void) => {
+    const logCount = countLogsForExercise(exerciseId, instanceId, dateISO)
     
     if (logCount > 0) {
       setDeleteDialog({
@@ -152,7 +153,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
         dateISO,
         logCount,
         onConfirm: () => {
-          deleteLogsForExercise(exerciseId, dateISO)
+          deleteLogsForExercise(exerciseId, instanceId, dateISO)
           planUpdateFn()
           setDeleteDialog(prev => ({ ...prev, isOpen: false }))
         }
@@ -235,10 +236,10 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
       const exerciseIdx = parseInt(parts[4])
       const routine = plan[day as keyof typeof plan]?.[routineIdx]
       if (routine && routine.type === 'routine') {
-        const exerciseId = routine.exerciseIds[exerciseIdx]
-        const exercise = exercises.find(e => e.id === exerciseId)
+        const routineExercise = routine.exercises[exerciseIdx]
+        const exercise = exercises.find(e => e.id === routineExercise.exerciseId)
         if (exercise) {
-          setActiveItem({ type: 'exercise', id: exerciseId })
+          setActiveItem({ type: 'exercise', exerciseId: routineExercise.exerciseId, instanceId: routineExercise.instanceId })
         }
       }
     } else {
@@ -314,12 +315,12 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
     
     if (!routineItem || routineItem.type !== 'routine') return
     
-    const exerciseIds = [...routineItem.exerciseIds]
-    const [moved] = exerciseIds.splice(activeExerciseIdx, 1)
-    exerciseIds.splice(overExerciseIdx, 0, moved)
+    const exercises = [...routineItem.exercises]
+    const [moved] = exercises.splice(activeExerciseIdx, 1)
+    exercises.splice(overExerciseIdx, 0, moved)
     
     const updatedItems = items.map((item, idx) => 
-      idx === activeRoutineIdx ? { ...item, exerciseIds } : item
+      idx === activeRoutineIdx ? { ...item, exercises } : item
     )
     
     onPlanUpdate(activeDateISO, updatedItems)
@@ -330,6 +331,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
     id, 
     exercise, 
     exerciseId, 
+    instanceId,
     exerciseIdx, 
     routineIdx, 
     day, 
@@ -354,6 +356,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
     id: string
     exercise: Exercise
     exerciseId: string
+    instanceId: string
     exerciseIdx: number
     routineIdx: number
     day: string
@@ -365,7 +368,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
     currentLog: LogEntry | undefined
     currentProgressDetails: string[]
     logs: LogEntry[]
-    onLog: (dateISO: string, day: DayKey, exerciseId: string) => void
+    onLog: (dateISO: string, day: DayKey, exerciseId: string, instanceId: string) => void
     plan: Plan
     updatePlan: (dateISO: string, items: PlanItem[]) => void
     weekStartISO: string
@@ -403,7 +406,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
           style={style}
           className="relative"
         >
-          <SimplifiedBar item={{ type: 'exercise', id: exerciseId }} exercises={[exercise]} />
+          <SimplifiedBar item={{ type: 'exercise', exerciseId, instanceId }} exercises={[exercise]} />
         </div>
       )
     }
@@ -429,7 +432,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
             <span>{exercise.name}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day as DayKey, exerciseId)}>Log</Button>
+            <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLog(dateISO, day as DayKey, exerciseId, instanceId)}>Log</Button>
             <Button 
               size="icon" 
               variant="ghost" 
@@ -438,17 +441,17 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
                   const currentItems = getPlanItemsForDate(plan, dateISO)
                   const updatedItems = currentItems.map((planItem: PlanItem, planIdx: number) => {
                     if (planIdx === routineIdx && planItem.type === 'routine') {
-                      const filteredExerciseIds = planItem.exerciseIds.filter((id: string) => id !== exerciseId)
-                      return filteredExerciseIds.length > 0 ? {
+                      const filteredExercises = planItem.exercises.filter((exercise) => exercise.exerciseId !== exerciseId)
+                      return filteredExercises.length > 0 ? {
                         ...planItem,
-                        exerciseIds: filteredExerciseIds
+                        exercises: filteredExercises
                       } : null
                     }
                     return planItem
                   }).filter((item: PlanItem | null): item is PlanItem => item !== null)
                   onPlanUpdate(dateISO, updatedItems)
                 }
-                handleDeleteExercise(exerciseId, dateISO, planUpdateFn)
+                handleDeleteExercise(exerciseId, instanceId, dateISO, planUpdateFn)
               }}
               className="h-8 w-8"
             >
@@ -578,14 +581,14 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
               )}
               <span className="inline-block h-3 w-3 rounded" style={{ background: item.color || '#3b82f6' }} />
               <span className="font-medium text-sm">{item.name}</span>
-              <span className="text-xs text-muted-foreground">({item.exerciseIds.length} exercises)</span>
+              <span className="text-xs text-muted-foreground">({item.exercises.length} exercises)</span>
             </div>
             <Button size="icon" variant="ghost" onClick={() => {
               const planUpdateFn = () => {
                 const currentItems = getPlanItemsForDate(plan, dateISO)
                 onPlanUpdate(dateISO, currentItems.filter((_, i2) => i2 !== idx))
               }
-              handleDeleteRoutine(item.exerciseIds, dateISO, planUpdateFn)
+              handleDeleteRoutine(item.exercises.map(e => e.exerciseId), dateISO, planUpdateFn)
             }}>
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -593,25 +596,26 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
           
           {/* Routine Exercises */}
           <SortableContext 
-            items={item.exerciseIds.map((exerciseId, exerciseIdx) => `${day}-routine-${idx}-exercise-${exerciseIdx}`)}
+            items={item.exercises.map((exercise, exerciseIdx) => `${day}-routine-${idx}-exercise-${exerciseIdx}`)}
             strategy={verticalListSortingStrategy}
           >
             <div className="ml-4 space-y-3 pt-2 pb-1">
-              {item.exerciseIds.map((exerciseId, exerciseIdx) => {
-                const ex = exercises.find((e) => e.id === exerciseId)
+              {item.exercises.map((exercise, exerciseIdx) => {
+                const ex = exercises.find((e) => e.id === exercise.exerciseId)
                 if (!ex) return null
                 const unit = getUnitForExercise(ex, settings)
                 const lastLog = MetricsService.getLatestLogBeforeDate(logs, ex.id, dateISO)
                 const pb = MetricsService.formatPersonalBest(ex, logs, unit)
-                const currentLog = MetricsService.getLogOnDate(logs, ex.id, dateISO)
+                const currentLog = MetricsService.getLogOnDate(logs, ex.id, exercise.instanceId, dateISO)
                 const currentProgressDetails = MetricsService.getCurrentProgressDetails(ex, currentLog, unit)
                 
                 return (
                   <SortableRoutineExercise
-                    key={exerciseId}
+                    key={exercise.instanceId}
                     id={`${day}-routine-${idx}-exercise-${exerciseIdx}`}
                     exercise={ex}
-                    exerciseId={exerciseId}
+                    exerciseId={exercise.exerciseId}
+                    instanceId={exercise.instanceId}
                     exerciseIdx={exerciseIdx}
                     routineIdx={idx}
                     day={day}
@@ -641,12 +645,12 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
       )
     } else {
       // Individual exercise
-      const ex = exercises.find((e) => e.id === item.id)
+      const ex = exercises.find((e) => e.id === item.exerciseId)
       if (!ex) return null
       const unit = getUnitForExercise(ex, settings)
       const lastLog = MetricsService.getLatestLogBeforeDate(logs, ex.id, dateISO)
       const pb = MetricsService.formatPersonalBest(ex, logs, unit)
-      const currentLog = MetricsService.getLogOnDate(logs, ex.id, dateISO)
+      const currentLog = MetricsService.getLogOnDate(logs, ex.id, item.instanceId, dateISO)
       const currentProgressDetails = MetricsService.getCurrentProgressDetails(ex, currentLog, unit)
       
       return (
@@ -666,13 +670,13 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
               <span>{ex.name}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLogExercise(dateISO, day as DayKey, ex.id)}>Log</Button>
+              <Button size="sm" variant="outline" disabled={isFuture} onClick={() => onLogExercise(dateISO, day as DayKey, ex.id, item.instanceId)}>Log</Button>
               <Button size="icon" variant="ghost" onClick={() => {
                 const planUpdateFn = () => {
                   const currentItems = getPlanItemsForDate(plan, dateISO)
                   onPlanUpdate(dateISO, currentItems.filter((_, i2) => i2 !== idx))
                 }
-                handleDeleteExercise(ex.id, dateISO, planUpdateFn)
+                handleDeleteExercise(ex.id, item.instanceId, dateISO, planUpdateFn)
               }}>
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -762,7 +766,7 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
                     <AddModal
                       exercises={exercises}
                       routines={routines}
-                      onAddExercise={(exerciseId) => onPlanUpdate(dateISO, [...dayItems, { type: 'exercise', id: exerciseId }])}
+                      onAddExercise={(exerciseId) => onPlanUpdate(dateISO, [...dayItems, { type: 'exercise', exerciseId, instanceId: uid() }])}
                       onAddRoutine={(routineId) => {
                         const routine = routines.find(r => r.id === routineId)
                         if (routine) {
@@ -770,7 +774,10 @@ export const PlannerPresenter = memo(function PlannerPresenter({ data, actions, 
                             type: 'routine', 
                             name: routine.name,
                             color: routine.color || '#3b82f6',
-                            exerciseIds: routine.exerciseIds 
+                            exercises: routine.exerciseIds.map(exerciseId => ({
+                              exerciseId,
+                              instanceId: uid()
+                            }))
                           }])
                         }
                       }}

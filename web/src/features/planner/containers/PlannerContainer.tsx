@@ -5,7 +5,7 @@ import { PlannerPresenter } from '../components/PlannerPresenter'
 import type { DayKey } from '@/lib/date'
 
 export interface PlannerContainerProps {
-  onLog: (dateISO: string, day: DayKey, exerciseId: string) => void
+  onLog: (dateISO: string, day: DayKey, exerciseId: string, instanceId: string) => void
 }
 
 export function PlannerContainer({ onLog }: PlannerContainerProps) {

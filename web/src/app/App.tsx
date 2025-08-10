@@ -53,7 +53,7 @@ export default function App() {
 function InnerApp() {
   const { state, dispatch } = useStore()
   const exerciseManager = useExerciseManager()
-  const [logTarget, setLogTarget] = useState<{ day: DayKey; dateISO: string; exerciseId: string } | null>(null)
+  const [logTarget, setLogTarget] = useState<{ day: DayKey; dateISO: string; exerciseId: string; instanceId: string } | null>(null)
   const [showExerciseModal, setShowExerciseModal] = useState(false)
   const [showRoutineModal, setShowRoutineModal] = useState(false)
 
@@ -104,17 +104,17 @@ function InnerApp() {
     dispatch(actions.routines.update(updated))
   }
 
-  function openLog(dateISO: string, day: DayKey, exerciseId: string) {
+  function openLog(dateISO: string, day: DayKey, exerciseId: string, instanceId: string) {
     const todayISO = iso(new Date())
     if (dateISO > todayISO) return
-    setLogTarget({ day, dateISO, exerciseId })
+    setLogTarget({ day, dateISO, exerciseId, instanceId })
   }
   function saveLog(payload: LogPayload) {
     if (!logTarget) return
     
-    // Check if there's already a log for this exercise on this date
+    // Check if there's already a log for this exercise instance on this date
     const existingLog = logSelectors.getForDate(state, logTarget.dateISO)
-      .find(log => log.exerciseId === logTarget.exerciseId)
+      .find(log => log.exerciseId === logTarget.exerciseId && log.instanceId === logTarget.instanceId)
     
     if (existingLog) {
       // Update existing log
@@ -122,7 +122,7 @@ function InnerApp() {
       toast.success('Updated workout log')
     } else {
       // Create new log
-      const entry: LogEntry = { id: uid(), day: logTarget.day, exerciseId: logTarget.exerciseId, dateISO: logTarget.dateISO, payload }
+      const entry: LogEntry = { id: uid(), day: logTarget.day, exerciseId: logTarget.exerciseId, instanceId: logTarget.instanceId, dateISO: logTarget.dateISO, payload }
       dispatch(actions.logs.save(entry))
       toast.success('Logged workout')
     }
@@ -164,7 +164,7 @@ function InnerApp() {
   const currentExercise = exercises.find((e) => e.id === logTarget?.exerciseId) || null
   const currentExistingLog = logTarget ? 
     logSelectors.getForDate(state, logTarget.dateISO)
-      .find(log => log.exerciseId === logTarget.exerciseId) || null : null
+      .find(log => log.exerciseId === logTarget.exerciseId && log.instanceId === logTarget.instanceId) || null : null
 
   return (
     <div className="max-w-7xl mx-auto">

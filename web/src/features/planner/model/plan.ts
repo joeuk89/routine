@@ -1,8 +1,8 @@
 import type { DayKey } from '@/lib/date'
 
 export type PlanItem = 
-  | { type: 'exercise'; id: string }
-  | { type: 'routine'; name: string; color: string; exerciseIds: string[] }
+  | { type: 'exercise'; exerciseId: string; instanceId: string }
+  | { type: 'routine'; name: string; color: string; exercises: Array<{exerciseId: string; instanceId: string}> }
 
 // New date-based plan structure - stores everything by ISO date
 export type DateBasedPlan = Record<string, PlanItem[]> // key = dateISO (yyyy-mm-dd)

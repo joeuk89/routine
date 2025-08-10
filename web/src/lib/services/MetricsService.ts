@@ -266,9 +266,9 @@ export class MetricsService {
       for (const item of dayPlan) {
         totalPlannedItems++
         if (item.type === 'exercise') {
-          plannedExercises.add(item.id)
+          plannedExercises.add(item.exerciseId)
         } else if (item.type === 'routine') {
-          item.exerciseIds.forEach(id => plannedExercises.add(id))
+          item.exercises.forEach(exercise => plannedExercises.add(exercise.exerciseId))
         }
       }
     }
@@ -339,9 +339,9 @@ export class MetricsService {
       // Collect all planned exercises for this date
       for (const item of items) {
         if (item.type === 'exercise') {
-          plannedExercises.add(item.id)
+          plannedExercises.add(item.exerciseId)
         } else if (item.type === 'routine') {
-          item.exerciseIds.forEach(id => plannedExercises.add(id))
+          item.exercises.forEach(exercise => plannedExercises.add(exercise.exerciseId))
         }
       }
 
@@ -419,10 +419,10 @@ export class MetricsService {
   }
 
   /**
-   * Gets the log for an exercise on a specific date.
+   * Gets the log for an exercise instance on a specific date.
    */
-  static getLogOnDate(logs: LogEntry[], exerciseId: string, dateISO: string): LogEntry | undefined {
-    return logs.find(log => log.exerciseId === exerciseId && log.dateISO === dateISO)
+  static getLogOnDate(logs: LogEntry[], exerciseId: string, instanceId: string, dateISO: string): LogEntry | undefined {
+    return logs.find(log => log.exerciseId === exerciseId && log.instanceId === instanceId && log.dateISO === dateISO)
   }
 
   /**

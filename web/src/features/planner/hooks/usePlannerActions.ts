@@ -8,13 +8,13 @@ import type { PlanItem } from '../model/plan'
 export interface PlannerActions {
   onPlanUpdate: (dateISO: string, items: PlanItem[]) => void
   onClearPlanDate: (dateISO: string) => void
-  onLogExercise: (dateISO: string, day: DayKey, exerciseId: string) => void
+  onLogExercise: (dateISO: string, day: DayKey, exerciseId: string, instanceId: string) => void
   onWeekNavigate: (direction: 'prev' | 'next' | 'goto', dateISO?: string) => void
 }
 
 export function usePlannerActions(
   dispatch: Dispatch<any>,
-  onLogCallback: (dateISO: string, day: DayKey, exerciseId: string) => void,
+  onLogCallback: (dateISO: string, day: DayKey, exerciseId: string, instanceId: string) => void,
   currentWeekStartISO: string,
   weekStartDay: DayKey
 ): PlannerActions {
@@ -37,8 +37,8 @@ export function usePlannerActions(
       console.log('Dispatched actions to clear plan and logs')
     },
     
-    onLogExercise: (dateISO: string, day: DayKey, exerciseId: string) => {
-      onLogCallback(dateISO, day, exerciseId)
+    onLogExercise: (dateISO: string, day: DayKey, exerciseId: string, instanceId: string) => {
+      onLogCallback(dateISO, day, exerciseId, instanceId)
     },
     
     onWeekNavigate: (direction: 'prev' | 'next' | 'goto', dateISO?: string) => {

@@ -117,13 +117,17 @@ const RoutineActionSchemas = {
 const PlanItemSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('exercise'),
-    id: z.string().min(1, 'Exercise ID is required')
+    exerciseId: z.string().min(1, 'Exercise ID is required'),
+    instanceId: z.string().min(1, 'Instance ID is required')
   }),
   z.object({
     type: z.literal('routine'),
     name: z.string().min(1, 'Routine name is required'),
     color: z.string().min(1, 'Routine color is required'),
-    exerciseIds: z.array(z.string()).min(1, 'Routine must contain at least one exercise')
+    exercises: z.array(z.object({
+      exerciseId: z.string().min(1, 'Exercise ID is required'),
+      instanceId: z.string().min(1, 'Instance ID is required')
+    })).min(1, 'Routine must contain at least one exercise')
   })
 ])
 
@@ -220,6 +224,7 @@ const LogEntrySchema = z.object({
   dateISO: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   day: DayKeySchema,
   exerciseId: z.string().min(1, 'Exercise ID is required'),
+  instanceId: z.string().min(1, 'Instance ID is required'),
   payload: LogPayloadSchema
 })
 

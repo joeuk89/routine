@@ -71,13 +71,13 @@ export function plannerReducer(
       Object.entries(state.plan).forEach(([dateISO, items]) => {
         const filteredItems = items.map((item) => {
           if (item.type === 'exercise') {
-            return item.id !== exerciseId ? item : null
+            return item.exerciseId !== exerciseId ? item : null
           } else {
-            // For routine snapshots, remove the exercise from the exerciseIds
-            const filteredExerciseIds = item.exerciseIds.filter(id => id !== exerciseId)
-            return filteredExerciseIds.length > 0 ? {
+            // For routine snapshots, remove the exercise from the exercises array
+            const filteredExercises = item.exercises.filter(exercise => exercise.exerciseId !== exerciseId)
+            return filteredExercises.length > 0 ? {
               ...item,
-              exerciseIds: filteredExerciseIds
+              exercises: filteredExercises
             } : null
           }
         }).filter((item): item is NonNullable<typeof item> => item !== null)
